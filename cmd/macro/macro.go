@@ -16,6 +16,11 @@ import (
 	"syscall"
 	"time"
 
+	"bytes"
+	"strings"
+	"os/exec"
+	shellquote "github.com/kballard/go-shellquote"
+
 	"github.com/go-errors/errors"
 	isatty "github.com/mattn/go-isatty"
 	"github.com/micro-editor/tcell/v2"
@@ -140,12 +145,36 @@ func DoPluginFlags() {
 	}
 }
 
+// Recreation of shell.RunInteractiveShell()
+func selectFileWithinDirectory(path string) (string, error) {
+	args, err := shellquote.Split("sh -c 'fd . \"" + path + "\" -tf | fzf'")
+	if err != nil { return "", err }
+	if len(args) == 0 { return "", errors.New("No directory") }
+	inputCmd := args[0]
+	scr := screen.TempFini()
+	args = args[1:]
+	outputBytes := &bytes.Buffer{}
+	cmd := exec.Command(inputCmd, args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = io.MultiWriter(os.Stdout, outputBytes)
+	cmd.Stderr = os.Stderr
+	err = cmd.Start()
+	if err == nil {
+		err = cmd.Wait()
+	} else {
+		screen.TermMessage(err)
+	}
+	screen.TempStart(scr)
+	return outputBytes.String(), err
+}
+
 // LoadInput determines which files should be loaded into buffers
 // based on the input stored in flag.Args()
 func LoadInput(args []string) []*buffer.Buffer {
 	// There are a number of ways micro should start given its input
 
-	// 1. If it is given a files in flag.Args(), it should open those
+	// 1. If it is given files in flag.Args(), it should open those
+	// 1b. If it is given a dirtory in flag.Args(), it should fuzzy search a file inside it
 
 	// 2. If there is no input file and the input is not a terminal, that means
 	// something is being piped in and the stdin should be opened in an
@@ -197,6 +226,29 @@ func LoadInput(args []string) []*buffer.Buffer {
 		// Option 1
 		// We go through each file and load it
 		for i := 0; i < len(files); i++ {
+			var file = files[i]
+			stat, err := os.Stat(file)
+			if err != nil {
+				screen.TermMessage(err)
+				continue
+			}
+			// Option 1 Bis
+			// We found a directory and must select a file within
+			if stat.IsDir() {
+				filename, err := selectFileWithinDirectory(file)
+				file = filepath.Join(file, strings.TrimSpace(filename))
+				if err != nil {
+					screen.TermMessage(err)
+					continue
+				}
+				buf, err := buffer.NewBufferFromFileAtLoc(file, btype, flagStartPos)
+				if err != nil {
+					screen.TermMessage(err)
+					continue
+				}
+				buffers = append(buffers, buf)
+				continue
+			}
 			buf, err := buffer.NewBufferFromFileAtLoc(files[i], btype, flagStartPos)
 			if err != nil {
 				screen.TermMessage(err)
