@@ -1,0 +1,35 @@
+# Macro
+
+> A modern and intuitive terminal-based text editor.
+
+**Macro** is a fork of [Micro editor](https://github.com/zyedidia/micro) Micro editor by _Zachary Yedidia_.
+
+Micro is a fantastic minimalist text editor for the terminal,
+written in [Go](https://go.dev) and relying on the [Tcell](https://github.com/gdamore/tcell) library.
+But it lacks activity (hundreds of issues and pull requests open).
+
+## Fork
+
+Being [Open-Source](https://opensource.org) (MIT License),
+Micro allows me to learn Go and how an editor works,
+And shape it to my liking.
+
+So far I worked on:
+- now able to open a directory (prompts for file with a fuzzy selector)
+- explorer to switch file
+- new commands
+- …
+
+## Try
+
+```
+git clone https://github.com/shkschneider/macro
+cd macro
+just build
+./macro
+```
+
+## Upstream
+
+- _branch:main_ HEAD
+- _branch:master_ (follows) upstream
