@@ -1,0 +1,27 @@
+name: Release
+on:
+  push:
+    tags:
+      - '*'
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: main
+        fetch-depth: 0
+        fetch-tags: true
+    - name: Just
+      uses: extractions/setup-just@v3
+    - name: Go
+      uses: actions/setup-go@v5
+    - name: Build
+      run: just release
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ./macro-*

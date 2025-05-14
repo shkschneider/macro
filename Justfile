@@ -58,6 +58,23 @@ uninstall:
     bin="$(which {{NAME}} 2>/dev/null)"
     test -x "$bin" && rm -vf "$bin" || { echo "{{RED}}Executable not found!{{NORMAL}}" ; exit 1 ; }
 
+[doc("goos goarch builds")]
+release: clean
+    #!/usr/bin/env bash
+    set -eu
+    git diff --quiet --exit-code || { echo "{{RED}}Dirty repository!{{NORMAL}}" >&2 ; exit 1 ; }
+    #go tool dist list
+    for target in {linux,darwin,windows}/{amd64,arm64} ; do
+        goos=$(dirname "$target")
+        goarch=$(basename "$target")
+        GOOS=$goos GOARCH=$goarch go build \
+            -o ./{{NAME}}-$goos-$goarch \
+            -trimpath \
+            -ldflags "{{FLAGS}}" \
+            {{CMD}}
+    done
+    file ./{{NAME}}-*
+
 [doc("rm -f …")]
 clean:
     @rm -vf {{NAME}}-*
