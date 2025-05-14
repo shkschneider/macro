@@ -37,3 +37,6 @@ just build
 
 - _branch:main_ HEAD
 - _branch:master_ upstream
+- Micro -> [Macro](https://github.com/shkschneider/macro)
+- Makefile -> [Justfile](https://github.com/casey/just)
+- ./cmd/micro -> ./cmd/macro
