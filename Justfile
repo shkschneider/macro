@@ -41,7 +41,7 @@ update:
     git tag -l 'v*' | sort -V | tail -1
 
 [doc("go generate + go build")]
-build:
+build: clean
     @test -d {{CMD}} || { echo "{{RED}}Invalid input directory!{{NORMAL}}" ; exit 1 ; }
     {{GO}} build -trimpath -ldflags "{{FLAGS}}" -v {{CMD}}
     @printf {{GREEN}} ; file ./{{NAME}} ; printf {{NORMAL}}

@@ -1,7 +1,9 @@
 .DS_Store
 
 macro
+macro-*
 !cmd/macro
+bin/
 
 micro
 !cmd/micro
