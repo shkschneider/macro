@@ -2,11 +2,9 @@
 
 > A modern and intuitive terminal-based text editor.
 
-**Macro** is a fork of [Micro editor](https://github.com/zyedidia/micro) by _Zachary Yedidia_.
-
-Micro is a fantastic minimalist text editor for the terminal,
+**Macro** is a fork of [Micro editor](https://github.com/zyedidia/micro) by _Zachary Yedidia_,
+is a fantastic minimalist text editor for the terminal,
 written in [Go](https://go.dev) and relying on the [Tcell](https://github.com/gdamore/tcell) library.
-But it lacks activity (hundreds of issues and pull requests open).
 
 Read more at [Micro's README](https://github.com/zyedidia/micro/blob/master/README.md).
 
@@ -22,7 +20,7 @@ So far I worked on:
 - new commands
 - …
 
-Version of Micro "v2.0.0+" was prefixed with a magic "4" to get Macro "v42.0.0"+.
+Version of Micro v2.0.0+ was prefixed with a magic "4" to get Macro v42.0.0+.
 
 ## Try
 

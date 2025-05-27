@@ -1,5 +1,10 @@
 .DS_Store
 
+macro
+macro-*
+!cmd/macro
+*.bak
+
 micro
 !cmd/micro
 binaries/
