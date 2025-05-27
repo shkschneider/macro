@@ -18,20 +18,32 @@ DEBUG="${GODEBUG:-false}"
 echo ":: DEBUG='${DEBUG}'"
 ARGS="${@:--v}"
 echo ":: ARGS='${ARGS}'"
-
-printf "<= %s\n" "go build -trimpath -ldflags '...' ${ARGS} ./cmd/${BIN}"
-
-go build -o "./${BIN}" \
- -trimpath \
- -ldflags "\
+FLAGS="\
  -s -w -extldflags=-static \
  -X 'github.com/zyedidia/micro/v2/internal/util.Version=${VERSION}' \
  -X 'github.com/zyedidia/micro/v2/internal/util.CommitHash=${HASH}' \
  -X 'github.com/zyedidia/micro/v2/internal/util.CompileDate=${DATE}' \
  -X 'github.com/zyedidia/micro/v2/internal/util.Debug=${DEBUG}' \
- " "${ARGS}" "./cmd/${BIN}" || exit 3
+"
 
-printf "=> %s\n" "$(file ./${BIN})"
+for target in {linux,darwin,windows}/{amd64,arm64} ; do
+    goos=$(dirname "$target")
+    goarch=$(basename "$target")
+    printf "<= %s\n" "$goos/$goarch go build ... ./cmd/${BIN}"
+    GOOS=$goos GOARCH=$goarch go build \
+        -o ./${BIN}-$goos-$goarch \
+        -trimpath \
+        -ldflags "${FLAGS}" \
+        ${ARGS} ./cmd/${BIN}
+    printf "=> %s\n" "./${BIN}-$goos-$goarch"
+done
+
+command -v gh >/dev/null || exit
+gh release create "${VERSION}" \
+    --latest=true \
+    --generate-notes --fail-on-no-commits \
+    ./macro-*
+
 exit 0
 
 # EOF

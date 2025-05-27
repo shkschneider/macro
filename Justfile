@@ -36,13 +36,18 @@ info:
 
 [doc("go generate")]
 generate:
+    @test -d {{CMD}} || { echo "{{RED}}Invalid input directory!{{NORMAL}}" ; exit 1 ; }
     {{GO}} generate {{CMD}}
 
 [doc("go build")]
 build: generate
-    @test -d {{CMD}} || { echo "{{RED}}Invalid input directory!{{NORMAL}}" ; exit 1 ; }
-    {{GO}} build -trimpath -ldflags "{{FLAGS}}" -v {{CMD}}
+    @.ci/build.sh || { echo "{{RED}}Build FAILED" ; exit 1 ; }
     @printf {{GREEN}} ; file ./{{NAME}} ; printf {{NORMAL}}
+
+[doc("goos goarch builds")]
+release: clean
+    @.ci/release.sh || { echo "{{RED}}Release FAILED" ; exit 1 ; }
+    @printf {{GREEN}} ; file ./{{NAME}}-* ; printf {{NORMAL}}
 
 [doc("go install")]
 install: build

@@ -24,6 +24,12 @@ Version of Micro v2.0.0+ was prefixed with a magic "4" to get Macro v42.0.0+.
 
 ## Try
 
+### Pre-built binaries
+
+https://github.com/shkschneider/macro/releases
+
+### Compile
+
 ```
 git clone https://github.com/shkschneider/macro
 cd macro
