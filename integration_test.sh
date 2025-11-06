@@ -59,3 +59,4 @@ echo "  ./macro /tmp/integration_readonly.txt   # Should show [READ-ONLY] warnin
 echo "  ./macro /tmp/integration_binary.bin     # Should show error about binary file"
 echo "  ./macro /tmp/integration_empty.txt      # Should open with empty content"
 echo "  ./macro /tmp/integration_test.json      # Should open normally"
+rm -f /tmp/integration_readonly.txt
