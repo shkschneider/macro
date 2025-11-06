@@ -28,5 +28,5 @@ go build -o macro
 
 ## Requirements
 
-- Go 1.16 or later
+- Go 1.23 or later
 - Terminal with support for ANSI/VT sequences

@@ -1,6 +1,8 @@
 module github.com/shkschneider/macro
 
-go 1.24.9
+go 1.23.0
+
+toolchain go1.24.9
 
 require (
 	github.com/gdamore/tcell/v2 v2.9.0
