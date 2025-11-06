@@ -89,9 +89,16 @@ func initialModel(filePath string) model {
 				m.message = "WARNING: File is read-only. Editing disabled. | Ctrl-Q: Quit"
 				// Use viewport for read-only files
 				m.viewport.SetContent(string(content))
+				m.viewport.GotoTop()
 			} else {
 				// Use textarea for writable files
 				m.textarea.SetValue(string(content))
+				// Move cursor to top (0,0)
+				m.textarea.CursorStart()
+				// Move cursor up to line 0
+				for m.textarea.Line() > 0 {
+					m.textarea.CursorUp()
+				}
 			}
 		}
 	}
@@ -141,6 +148,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			content, err := os.ReadFile(path)
 			if err == nil {
 				m.textarea.SetValue(string(content))
+				// Move cursor to top (0,0)
+				m.textarea.CursorStart()
+				// Move cursor up to line 0
+				for m.textarea.Line() > 0 {
+					m.textarea.CursorUp()
+				}
 				m.message = defaultMessage
 				m.err = nil
 			} else {
