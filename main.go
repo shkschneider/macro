@@ -14,13 +14,18 @@ import (
 )
 
 var (
-	titleStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12"))
-	statusStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
+	statusBarStyle = lipgloss.NewStyle().
+			Background(lipgloss.Color("15")). // White background
+			Foreground(lipgloss.Color("0")).  // Black foreground
+			Bold(true).
+			Padding(0, 1) // Add horizontal padding
+	messageStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
 	errorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
 	successStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
 	warningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
 
-	defaultStatus = "Ctrl-S: Save | Ctrl-Q: Quit"
+	defaultMessage = "Ctrl-S: Save | Ctrl-Q: Quit"
+	termWidth      = 0 // Will be updated on WindowSizeMsg
 )
 
 // isTextFile checks if the file content is text (not binary)
@@ -57,7 +62,7 @@ type model struct {
 	viewport   viewport.Model
 	filepicker filepicker.Model
 	filePath   string
-	status     string
+	message    string // Message line for errors/warnings/info
 	err        error
 	showPicker bool
 	readOnly   bool
@@ -80,7 +85,7 @@ func initialModel(filePath string) model {
 		viewport:   vp,
 		filepicker: fp,
 		filePath:   filePath,
-		status:     defaultStatus,
+		message:    defaultMessage,
 		err:        nil,
 		showPicker: false,
 		readOnly:   false,
@@ -90,7 +95,7 @@ func initialModel(filePath string) model {
 	if filePath != "" {
 		info, err := os.Stat(filePath)
 		if err != nil {
-			m.status = fmt.Sprintf("Error: Error: %v | Ctrl-Q: Quit", err)
+			m.message = fmt.Sprintf("Error: Error: %v | Ctrl-Q: Quit", err)
 			m.err = err
 			return m
 		}
@@ -103,13 +108,13 @@ func initialModel(filePath string) model {
 			content, err := os.ReadFile(filePath)
 			if err != nil {
 				// Handle file read errors
-				m.status = fmt.Sprintf("Error: Cannot read file: %v | Ctrl-Q: Quit", err)
+				m.message = fmt.Sprintf("Error: Cannot read file: %v | Ctrl-Q: Quit", err)
 				m.err = err
 				return m
 			}
 			// Check if file is text
 			if !isTextFile(content) {
-				m.status = "Error: Cannot open binary file. Please use a binary editor."
+				m.message = "Error: Cannot open binary file. Please use a binary editor."
 				m.err = fmt.Errorf("binary file detected")
 				return m
 			}
@@ -117,7 +122,7 @@ func initialModel(filePath string) model {
 			if isReadOnly(filePath) {
 				m.readOnly = true
 				m.isWarning = true
-				m.status = "WARNING: File is read-only. Editing disabled. | Ctrl-Q: Quit"
+				m.message = "WARNING: File is read-only. Editing disabled. | Ctrl-Q: Quit"
 				// Use viewport for read-only files
 				m.viewport.SetContent(string(content))
 			} else {
@@ -168,10 +173,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			content, err := os.ReadFile(path)
 			if err == nil {
 				m.textarea.SetValue(string(content))
-				m.status = defaultStatus
+				m.message = defaultMessage
 				m.err = nil
 			} else {
-				m.status = fmt.Sprintf("Error loading file: %v", err)
+				m.message = fmt.Sprintf("Error loading file: %v", err)
 				m.err = err
 			}
 			m.showPicker = false
@@ -190,20 +195,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case tea.KeyCtrlS:
 			if m.readOnly {
-				m.status = "WARNING: Cannot save - file is read-only | Ctrl-Q: Quit"
+				m.message = "WARNING: Cannot save - file is read-only | Ctrl-Q: Quit"
 				m.isWarning = true
 				return m, nil
 			}
 			if m.filePath == "" {
-				m.status = "Error: No filename specified. Usage: macro <filename>"
+				m.message = "Error: No filename specified. Usage: macro <filename>"
 				m.err = fmt.Errorf("no filename")
 			} else {
 				err := os.WriteFile(m.filePath, []byte(m.textarea.Value()), 0644)
 				if err != nil {
-					m.status = fmt.Sprintf("Error saving: %v", err)
+					m.message = fmt.Sprintf("Error saving: %v", err)
 					m.err = err
 				} else {
-					m.status = fmt.Sprintf("Saved to %s | Ctrl-S: Save | Ctrl-Q: Quit", m.filePath)
+					m.message = fmt.Sprintf("Saved to %s | Ctrl-S: Save | Ctrl-Q: Quit", m.filePath)
 					m.err = nil
 				}
 			}
@@ -211,10 +216,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		// Calculate available height for content
-		// Title: 1 line + 2 newlines = 3 lines total
-		// Status: 2 newlines + 1 line = 3 lines total
-		// Total overhead: 6 lines
-		contentHeight := msg.Height - 6
+		// New layout: content + status bar (1 line) + message line (1 line) = 2 lines overhead
+		contentHeight := msg.Height - 2
 		if contentHeight < 1 {
 			contentHeight = 1
 		}
@@ -223,6 +226,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.textarea.SetHeight(contentHeight)
 		m.viewport.Width = msg.Width
 		m.viewport.Height = contentHeight
+
+		// Update terminal width for status bar
+		termWidth = msg.Width
+
 		return m, nil
 	}
 
@@ -238,33 +245,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	// If showing filepicker, render it instead
+	// If showing filepicker, keep the old layout for now
 	if m.showPicker {
-		title := titleStyle.Render("macro - Select a file")
-		instructions := statusStyle.Render("↑/↓: Navigate | Enter: Select | Ctrl-Q: Quit")
-		return fmt.Sprintf("%s\n\n%s\n\n%s", title, m.filepicker.View(), instructions)
-	}
-
-	// Normal editor view
-	// Title
-	title := "macro - Simple Text Editor"
-	if m.filePath != "" {
-		title = fmt.Sprintf("macro - %s", m.filePath)
-		if m.readOnly {
-			title += " [READ-ONLY]"
-		}
-	}
-
-	// Status bar
-	statusBar := m.status
-	if m.err != nil {
-		statusBar = errorStyle.Render(m.status)
-	} else if m.isWarning {
-		statusBar = warningStyle.Render(m.status)
-	} else if m.status != defaultStatus {
-		statusBar = successStyle.Render(m.status)
-	} else {
-		statusBar = statusStyle.Render(m.status)
+		return fmt.Sprintf("%s\n\n%s\n\n%s",
+			lipgloss.NewStyle().Bold(true).Render("macro - Select a file"),
+			m.filepicker.View(),
+			messageStyle.Render("↑/↓: Navigate | Enter: Select | Ctrl-Q: Quit"))
 	}
 
 	// Content area - use viewport for read-only, textarea for writable
@@ -275,11 +261,37 @@ func (m model) View() string {
 		contentView = m.textarea.View()
 	}
 
+	// Build status bar with file info
+	statusInfo := ""
+	if m.filePath != "" {
+		statusInfo = m.filePath
+		if m.readOnly {
+			statusInfo += " [READ-ONLY]"
+		}
+	} else {
+		statusInfo = "New File"
+	}
+
+	// Apply width to fill the entire line with reverse video
+	statusBar := statusBarStyle.Width(termWidth).Render(statusInfo)
+
+	// Message line for warnings/errors/info
+	var messageLine string
+	if m.err != nil {
+		messageLine = errorStyle.Render(m.message)
+	} else if m.isWarning {
+		messageLine = warningStyle.Render(m.message)
+	} else if m.message != defaultMessage {
+		messageLine = successStyle.Render(m.message)
+	} else {
+		messageLine = messageStyle.Render(m.message)
+	}
+
 	return fmt.Sprintf(
-		"%s\n\n%s\n\n%s",
-		titleStyle.Render(title),
+		"%s\n%s\n%s",
 		contentView,
 		statusBar,
+		messageLine,
 	)
 }
 
