@@ -72,14 +72,14 @@ func initialModel(filePath string) model {
 	fp.FileAllowed = true
 
 	m := model{
-		textarea:  ti,
+		textarea:   ti,
 		filepicker: fp,
 		filePath:   filePath,
-		status:    defaultStatus,
-		err:       nil,
+		status:     defaultStatus,
+		err:        nil,
 		showPicker: false,
-		readOnly:  false,
-		isWarning: false,
+		readOnly:   false,
+		isWarning:  false,
 	}
 
 	// Check if filePath is a directory
@@ -109,7 +109,6 @@ func initialModel(filePath string) model {
 				m.err = fmt.Errorf("binary file detected")
 				return m
 			}
-
 			// Check if file is read-only
 			if isReadOnly(filePath) {
 				m.readOnly = true
