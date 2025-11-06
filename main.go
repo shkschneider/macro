@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/textarea"
@@ -15,9 +17,39 @@ var (
 	statusStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
 	errorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
 	successStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
+	warningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
 
 	defaultStatus = "Ctrl-S: Save | Ctrl-Q: Quit"
 )
+
+// isTextFile checks if the file content is text (not binary)
+func isTextFile(content []byte) bool {
+	if len(content) == 0 {
+		return true // Empty files are treated as text
+	}
+
+	// Use http.DetectContentType to detect the MIME type
+	contentType := http.DetectContentType(content)
+
+	// Check if it's a text type
+	return strings.HasPrefix(contentType, "text/") ||
+		contentType == "application/json" ||
+		contentType == "application/xml" ||
+		contentType == "application/javascript"
+}
+
+// isReadOnly checks if the file is read-only
+func isReadOnly(filePath string) bool {
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return false
+	}
+
+	// Check if we have write permission
+	// On Unix-like systems, check if the owner write bit is set
+	mode := info.Mode()
+	return mode&0200 == 0 // Owner write bit not set
+}
 
 type model struct {
 	textarea   textarea.Model
@@ -26,6 +58,8 @@ type model struct {
 	status     string
 	err        error
 	showPicker bool
+	readOnly   bool
+	isWarning  bool
 }
 
 func initialModel(filePath string) model {
@@ -38,12 +72,14 @@ func initialModel(filePath string) model {
 	fp.FileAllowed = true
 
 	m := model{
-		textarea:   ti,
+		textarea:  ti,
 		filepicker: fp,
 		filePath:   filePath,
-		status:     defaultStatus,
-		err:        nil,
+		status:    defaultStatus,
+		err:       nil,
 		showPicker: false,
+		readOnly:  false,
+		isWarning: false,
 	}
 
 	// Check if filePath is a directory
@@ -57,12 +93,25 @@ func initialModel(filePath string) model {
 			// It's a file, load it
 			content, err := os.ReadFile(filePath)
 			if err == nil {
-				m.textarea.SetValue(string(content))
+				// Check if file is text
+				if !isTextFile(content) {
+					m.status = "Error: Cannot open binary file. Please use a binary editor."
+					m.err = fmt.Errorf("binary file detected")
+					return m
+				}
+
+				// Check if file is read-only
+				if isReadOnly(filePath) {
+					m.readOnly = true
+					m.isWarning = true
+					m.status = "WARNING: File is read-only. Editing disabled. | Ctrl-Q: Quit"
+					ti.Blur() // Remove focus to indicate read-only
+				}
+
+				ti.SetValue(string(content))
 			}
 		}
-		// If error, just leave empty
 	}
-
 	return m
 }
 
@@ -119,6 +168,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlQ:
 			return m, tea.Quit
 		case tea.KeyCtrlS:
+			if m.readOnly {
+				m.status = "WARNING: Cannot save - file is read-only | Ctrl-Q: Quit"
+				m.isWarning = true
+				return m, nil
+			}
 			if m.filePath == "" {
 				m.status = "Error: No filename specified. Usage: macro <filename>"
 				m.err = fmt.Errorf("no filename")
@@ -133,6 +187,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			return m, nil
+		default:
+			// Don't allow text input if read-only
+			if m.readOnly {
+				return m, nil
+			}
 		}
 	case tea.WindowSizeMsg:
 		m.textarea.SetWidth(msg.Width)
@@ -140,7 +199,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	m.textarea, cmd = m.textarea.Update(msg)
+	// Don't update textarea if read-only or if there's an error (binary file)
+	if !m.readOnly && m.err == nil {
+		m.textarea, cmd = m.textarea.Update(msg)
+	}
 	return m, cmd
 }
 
@@ -157,12 +219,17 @@ func (m model) View() string {
 	title := "macro - Simple Text Editor"
 	if m.filePath != "" {
 		title = fmt.Sprintf("macro - %s", m.filePath)
+		if m.readOnly {
+			title += " [READ-ONLY]"
+		}
 	}
 
 	// Status bar
 	statusBar := m.status
 	if m.err != nil {
 		statusBar = errorStyle.Render(m.status)
+	} else if m.isWarning {
+		statusBar = warningStyle.Render(m.status)
 	} else if m.status != defaultStatus {
 		statusBar = successStyle.Render(m.status)
 	} else {
