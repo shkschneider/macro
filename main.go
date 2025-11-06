@@ -4,76 +4,119 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
+	"github.com/charmbracelet/bubbles/textarea"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 var (
-	app      *tview.Application
-	textArea *tview.TextArea
-	filePath string
-	status   *tview.TextView
+	titleStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12"))
+	statusStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
+	errorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+	successStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
 )
 
-func main() {
-	// Get filename from command line args
-	if len(os.Args) > 1 {
-		filePath = os.Args[1]
-	}
+type model struct {
+	textarea textarea.Model
+	filePath string
+	status   string
+	err      error
+}
 
-	app = tview.NewApplication()
-
-	// Create text area
-	textArea = tview.NewTextArea()
-	textArea.SetBorder(true)
-	textArea.SetTitle("macro - Simple Text Editor")
+func initialModel(filePath string) model {
+	ti := textarea.New()
+	ti.Focus()
+	ti.ShowLineNumbers = false
 
 	// Load file if specified
 	if filePath != "" {
 		content, err := os.ReadFile(filePath)
 		if err == nil {
-			textArea.SetText(string(content), true)
+			ti.SetValue(string(content))
 		}
-		textArea.SetTitle(fmt.Sprintf("macro - %s", filePath))
 	}
 
-	// Create status bar
-	status = tview.NewTextView()
-	status.SetDynamicColors(true)
-	status.SetText("[yellow]Ctrl-S[white]: Save | [yellow]Ctrl-Q[white]: Quit")
+	return model{
+		textarea: ti,
+		filePath: filePath,
+		status:   "Ctrl-S: Save | Ctrl-Q: Quit",
+		err:      nil,
+	}
+}
 
-	// Create layout
-	flex := tview.NewFlex().
-		SetDirection(tview.FlexRow).
-		AddItem(textArea, 0, 1, true).
-		AddItem(status, 1, 0, false)
+func (m model) Init() tea.Cmd {
+	return textarea.Blink
+}
 
-	// Set input capture for keyboard shortcuts
-	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Key() {
-		case tcell.KeyCtrlQ:
-			// Quit
-			app.Stop()
-			return nil
-		case tcell.KeyCtrlS:
-			// Save
-			if filePath == "" {
-				status.SetText("[red]Error: No filename specified. Usage: macro <filename>")
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlQ:
+			return m, tea.Quit
+		case tea.KeyCtrlS:
+			if m.filePath == "" {
+				m.status = "Error: No filename specified. Usage: macro <filename>"
+				m.err = fmt.Errorf("no filename")
 			} else {
-				err := os.WriteFile(filePath, []byte(textArea.GetText()), 0644)
+				err := os.WriteFile(m.filePath, []byte(m.textarea.Value()), 0644)
 				if err != nil {
-					status.SetText(fmt.Sprintf("[red]Error saving: %v", err))
+					m.status = fmt.Sprintf("Error saving: %v", err)
+					m.err = err
 				} else {
-					status.SetText(fmt.Sprintf("[green]Saved to %s | [yellow]Ctrl-S[white]: Save | [yellow]Ctrl-Q[white]: Quit", filePath))
+					m.status = fmt.Sprintf("Saved to %s | Ctrl-S: Save | Ctrl-Q: Quit", m.filePath)
+					m.err = nil
 				}
 			}
-			return nil
+			return m, nil
 		}
-		return event
-	})
+	case tea.WindowSizeMsg:
+		m.textarea.SetWidth(msg.Width)
+		m.textarea.SetHeight(msg.Height - 3) // Reserve space for title and status
+		return m, nil
+	}
 
-	// Run the application
-	if err := app.SetRoot(flex, true).EnableMouse(true).Run(); err != nil {
-		panic(err)
+	m.textarea, cmd = m.textarea.Update(msg)
+	return m, cmd
+}
+
+func (m model) View() string {
+	// Title
+	title := "macro - Simple Text Editor"
+	if m.filePath != "" {
+		title = fmt.Sprintf("macro - %s", m.filePath)
+	}
+
+	// Status bar
+	statusBar := m.status
+	if m.err != nil {
+		statusBar = errorStyle.Render(m.status)
+	} else if m.status != "Ctrl-S: Save | Ctrl-Q: Quit" {
+		statusBar = successStyle.Render(m.status)
+	} else {
+		statusBar = statusStyle.Render(m.status)
+	}
+
+	return fmt.Sprintf(
+		"%s\n\n%s\n\n%s",
+		titleStyle.Render(title),
+		m.textarea.View(),
+		statusBar,
+	)
+}
+
+func main() {
+	// Get filename from command line args
+	filePath := ""
+	if len(os.Args) > 1 {
+		filePath = os.Args[1]
+	}
+
+	p := tea.NewProgram(initialModel(filePath), tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
 	}
 }
