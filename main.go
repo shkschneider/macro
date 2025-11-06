@@ -148,7 +148,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			}
 		case tea.WindowSizeMsg:
-			m.filepicker.SetHeight(msg.Height - 3)
+			// Title: 1 line + 2 newlines = 3 lines
+			// Instructions: 2 newlines + 1 line = 3 lines
+			// Total overhead: 6 lines
+			pickerHeight := msg.Height - 6
+			if pickerHeight < 1 {
+				pickerHeight = 1
+			}
+			m.filepicker.SetHeight(pickerHeight)
 		}
 
 		// Update filepicker
@@ -203,10 +210,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	case tea.WindowSizeMsg:
+		// Calculate available height for content
+		// Title: 1 line + 2 newlines = 3 lines total
+		// Status: 2 newlines + 1 line = 3 lines total
+		// Total overhead: 6 lines
+		contentHeight := msg.Height - 6
+		if contentHeight < 1 {
+			contentHeight = 1
+		}
+
 		m.textarea.SetWidth(msg.Width)
-		m.textarea.SetHeight(msg.Height - 3) // Reserve space for title and status
+		m.textarea.SetHeight(contentHeight)
 		m.viewport.Width = msg.Width
-		m.viewport.Height = msg.Height - 3
+		m.viewport.Height = contentHeight
 		return m, nil
 	}
 
