@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/textarea"
@@ -27,35 +25,6 @@ var (
 	defaultMessage = "Ctrl-S: Save | Ctrl-Q: Quit"
 	termWidth      = 0 // Will be updated on WindowSizeMsg
 )
-
-// isTextFile checks if the file content is text (not binary)
-func isTextFile(content []byte) bool {
-	if len(content) == 0 {
-		return true // Empty files are treated as text
-	}
-
-	// Use http.DetectContentType to detect the MIME type
-	contentType := http.DetectContentType(content)
-
-	// Check if it's a text type
-	return strings.HasPrefix(contentType, "text/") ||
-		contentType == "application/json" ||
-		contentType == "application/xml" ||
-		contentType == "application/javascript"
-}
-
-// isReadOnly checks if the file is read-only
-func isReadOnly(filePath string) bool {
-	info, err := os.Stat(filePath)
-	if err != nil {
-		return false
-	}
-
-	// Check if we have write permission
-	// On Unix-like systems, check if the owner write bit is set
-	mode := info.Mode()
-	return mode&0200 == 0 // Owner write bit not set
-}
 
 type model struct {
 	textarea   textarea.Model
@@ -112,14 +81,8 @@ func initialModel(filePath string) model {
 				m.err = err
 				return m
 			}
-			// Check if file is text
-			if !isTextFile(content) {
-				m.message = "Error: Cannot open binary file. Please use a binary editor."
-				m.err = fmt.Errorf("binary file detected")
-				return m
-			}
 			// Check if file is read-only
-			if isReadOnly(filePath) {
+			if info.Mode()&0200 == 0 {
 				m.readOnly = true
 				m.isWarning = true
 				m.message = "WARNING: File is read-only. Editing disabled. | Ctrl-Q: Quit"
