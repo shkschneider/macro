@@ -87,7 +87,6 @@ func initialModel(filePath string) model {
 		isWarning:  false,
 	}
 
-	// Check if filePath is a directory
 	if filePath != "" {
 		info, err := os.Stat(filePath)
 		if err != nil {

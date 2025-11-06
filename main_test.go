@@ -138,4 +138,19 @@ func TestInitialModel(t *testing.T) {
 	if m.err == nil {
 		t.Error("Expected error for non-existent file")
 	}
+
+	// Test with directory
+	tmpDir, err := os.MkdirTemp("", "test_dir_*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	m = initialModel(tmpDir)
+	if m.err != nil {
+		t.Errorf("Expected no error for directory, got %v", m.err)
+	}
+	if m.filePath != tmpDir {
+		t.Errorf("Expected filePath to be %s, got %s", tmpDir, m.filePath)
+	}
 }
