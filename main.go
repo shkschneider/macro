@@ -65,18 +65,18 @@ type model struct {
 }
 
 func initialModel(filePath string) model {
-	ti := textarea.New()
-	ti.Focus()
-	ti.ShowLineNumbers = false
+	ta := textarea.New()
+	ta.Focus()
+	ta.ShowLineNumbers = false
 
 	fp := filepicker.New()
 	fp.DirAllowed = false
 	fp.FileAllowed = true
 
-	vp := viewport.New(80, 24) // Default size, will be updated on WindowSizeMsg
+	vp := viewport.New(80, 24)
 
 	m := model{
-		textarea:   ti,
+		textarea:   ta,
 		viewport:   vp,
 		filepicker: fp,
 		filePath:   filePath,
@@ -120,10 +120,10 @@ func initialModel(filePath string) model {
 				m.isWarning = true
 				m.status = "WARNING: File is read-only. Editing disabled. | Ctrl-Q: Quit"
 				// Use viewport for read-only files
-				vp.SetContent(string(content))
+				m.viewport.SetContent(string(content))
 			} else {
 				// Use textarea for writable files
-				ti.SetValue(string(content))
+				m.textarea.SetValue(string(content))
 			}
 		}
 	}
