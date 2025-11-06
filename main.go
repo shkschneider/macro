@@ -14,6 +14,8 @@ var (
 	statusStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
 	errorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
 	successStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
+
+	defaultStatus = "Ctrl-S: Save | Ctrl-Q: Quit"
 )
 
 type model struct {
@@ -39,7 +41,7 @@ func initialModel(filePath string) model {
 	return model{
 		textarea: ti,
 		filePath: filePath,
-		status:   "Ctrl-S: Save | Ctrl-Q: Quit",
+		status:   defaultStatus,
 		err:      nil,
 	}
 }
@@ -93,7 +95,7 @@ func (m model) View() string {
 	statusBar := m.status
 	if m.err != nil {
 		statusBar = errorStyle.Render(m.status)
-	} else if m.status != "Ctrl-S: Save | Ctrl-Q: Quit" {
+	} else if m.status != defaultStatus {
 		statusBar = successStyle.Render(m.status)
 	} else {
 		statusBar = statusStyle.Render(m.status)
