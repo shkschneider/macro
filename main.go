@@ -52,19 +52,17 @@ func initialModel(filePath string) model {
 		if err == nil && info.IsDir() {
 			// It's a directory, show filepicker
 			m.showPicker = true
-			fp.CurrentDirectory = filePath
-			m.filepicker = fp
+			m.filepicker.CurrentDirectory = filePath
 		} else if err == nil {
 			// It's a file, load it
 			content, err := os.ReadFile(filePath)
 			if err == nil {
-				ti.SetValue(string(content))
+				m.textarea.SetValue(string(content))
 			}
 		}
 		// If error, just leave empty
 	}
 
-	m.textarea = ti
 	return m
 }
 
@@ -88,8 +86,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case tea.WindowSizeMsg:
 			m.filepicker.SetHeight(msg.Height - 3)
-			m.textarea.SetWidth(msg.Width)
-			m.textarea.SetHeight(msg.Height - 3)
 		}
 
 		// Update filepicker
