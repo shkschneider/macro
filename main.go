@@ -93,16 +93,19 @@ func initialModel(filePath string) model {
 			} else {
 				// Use textarea for writable files
 				m.textarea.SetValue(string(content))
-				// Move cursor to top (0,0)
-				m.textarea.CursorStart()
-				// Move cursor up to line 0
-				for m.textarea.Line() > 0 {
-					m.textarea.CursorUp()
-				}
+				m.moveCursorToTop()
 			}
 		}
 	}
 	return m
+}
+
+// moveCursorToTop moves the textarea cursor to position (0,0)
+func (m *model) moveCursorToTop() {
+	m.textarea.CursorStart()
+	for m.textarea.Line() > 0 {
+		m.textarea.CursorUp()
+	}
 }
 
 func (m model) Init() tea.Cmd {
@@ -148,12 +151,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			content, err := os.ReadFile(path)
 			if err == nil {
 				m.textarea.SetValue(string(content))
-				// Move cursor to top (0,0)
-				m.textarea.CursorStart()
-				// Move cursor up to line 0
-				for m.textarea.Line() > 0 {
-					m.textarea.CursorUp()
-				}
+				m.moveCursorToTop()
 				m.message = defaultMessage
 				m.err = nil
 			} else {
