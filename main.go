@@ -24,6 +24,7 @@ var (
 
 	defaultMessage = "Ctrl-S: Save | Ctrl-Q: Quit"
 	termWidth      = 0 // Will be updated on WindowSizeMsg
+	termHeight     = 0 // Will be updated on WindowSizeMsg
 )
 
 type model struct {
@@ -124,6 +125,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				pickerHeight = 1
 			}
 			m.filepicker.SetHeight(pickerHeight)
+
+			// Store terminal dimensions
+			termWidth = msg.Width
+			termHeight = msg.Height
 		}
 
 		// Update filepicker
@@ -143,6 +148,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.err = err
 			}
 			m.showPicker = false
+
+			// Resize textarea/viewport to editor dimensions (termHeight - 2 for status bar and message line)
+			if termHeight > 0 {
+				contentHeight := termHeight - 2
+				if contentHeight < 1 {
+					contentHeight = 1
+				}
+				m.textarea.SetWidth(termWidth)
+				m.textarea.SetHeight(contentHeight)
+				m.viewport.Width = termWidth
+				m.viewport.Height = contentHeight
+			}
+
 			m.textarea.Focus()
 			return m, textarea.Blink
 		}
@@ -190,8 +208,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.Width = msg.Width
 		m.viewport.Height = contentHeight
 
-		// Update terminal width for status bar
+		// Update terminal dimensions for status bar and future use
 		termWidth = msg.Width
+		termHeight = msg.Height
 
 		return m, nil
 	}
