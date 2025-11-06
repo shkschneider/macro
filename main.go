@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -19,10 +20,12 @@ var (
 )
 
 type model struct {
-	textarea textarea.Model
-	filePath string
-	status   string
-	err      error
+	textarea   textarea.Model
+	filepicker filepicker.Model
+	filePath   string
+	status     string
+	err        error
+	showPicker bool
 }
 
 func initialModel(filePath string) model {
@@ -30,29 +33,90 @@ func initialModel(filePath string) model {
 	ti.Focus()
 	ti.ShowLineNumbers = false
 
-	// Load file if specified
-	if filePath != "" {
-		content, err := os.ReadFile(filePath)
-		if err == nil {
-			ti.SetValue(string(content))
-		}
+	fp := filepicker.New()
+	fp.DirAllowed = false
+	fp.FileAllowed = true
+
+	m := model{
+		textarea:   ti,
+		filepicker: fp,
+		filePath:   filePath,
+		status:     defaultStatus,
+		err:        nil,
+		showPicker: false,
 	}
 
-	return model{
-		textarea: ti,
-		filePath: filePath,
-		status:   defaultStatus,
-		err:      nil,
+	// Check if filePath is a directory
+	if filePath != "" {
+		info, err := os.Stat(filePath)
+		if err == nil && info.IsDir() {
+			// It's a directory, show filepicker
+			m.showPicker = true
+			fp.CurrentDirectory = filePath
+			m.filepicker = fp
+		} else if err == nil {
+			// It's a file, load it
+			content, err := os.ReadFile(filePath)
+			if err == nil {
+				ti.SetValue(string(content))
+			}
+		}
+		// If error, just leave empty
 	}
+
+	m.textarea = ti
+	return m
 }
 
 func (m model) Init() tea.Cmd {
+	if m.showPicker {
+		return m.filepicker.Init()
+	}
 	return textarea.Blink
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
+	// If showing filepicker, handle filepicker messages
+	if m.showPicker {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyCtrlQ:
+				return m, tea.Quit
+			}
+		case tea.WindowSizeMsg:
+			m.filepicker.SetHeight(msg.Height - 3)
+			m.textarea.SetWidth(msg.Width)
+			m.textarea.SetHeight(msg.Height - 3)
+		}
+
+		// Update filepicker
+		m.filepicker, cmd = m.filepicker.Update(msg)
+
+		// Check if file was selected
+		if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
+			// Load the selected file
+			m.filePath = path
+			content, err := os.ReadFile(path)
+			if err == nil {
+				m.textarea.SetValue(string(content))
+				m.status = defaultStatus
+				m.err = nil
+			} else {
+				m.status = fmt.Sprintf("Error loading file: %v", err)
+				m.err = err
+			}
+			m.showPicker = false
+			m.textarea.Focus()
+			return m, textarea.Blink
+		}
+
+		return m, cmd
+	}
+
+	// Normal editor mode
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -85,6 +149,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
+	// If showing filepicker, render it instead
+	if m.showPicker {
+		title := titleStyle.Render("macro - Select a file")
+		instructions := statusStyle.Render("↑/↓: Navigate | Enter: Select | Ctrl-Q: Quit")
+		return fmt.Sprintf("%s\n\n%s\n\n%s", title, m.filepicker.View(), instructions)
+	}
+
+	// Normal editor view
 	// Title
 	title := "macro - Simple Text Editor"
 	if m.filePath != "" {
