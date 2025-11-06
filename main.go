@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -53,6 +54,7 @@ func isReadOnly(filePath string) bool {
 
 type model struct {
 	textarea   textarea.Model
+	viewport   viewport.Model
 	filepicker filepicker.Model
 	filePath   string
 	status     string
@@ -71,8 +73,11 @@ func initialModel(filePath string) model {
 	fp.DirAllowed = false
 	fp.FileAllowed = true
 
+	vp := viewport.New(80, 24) // Default size, will be updated on WindowSizeMsg
+
 	m := model{
 		textarea:   ti,
+		viewport:   vp,
 		filepicker: fp,
 		filePath:   filePath,
 		status:     defaultStatus,
@@ -114,9 +119,12 @@ func initialModel(filePath string) model {
 				m.readOnly = true
 				m.isWarning = true
 				m.status = "WARNING: File is read-only. Editing disabled. | Ctrl-Q: Quit"
-				ti.Blur() // Remove focus to indicate read-only
+				// Use viewport for read-only files
+				vp.SetContent(string(content))
+			} else {
+				// Use textarea for writable files
+				ti.SetValue(string(content))
 			}
-			ti.SetValue(string(content))
 		}
 	}
 	return m
@@ -194,20 +202,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			return m, nil
-		default:
-			// Don't allow text input if read-only
-			if m.readOnly {
-				return m, nil
-			}
 		}
 	case tea.WindowSizeMsg:
 		m.textarea.SetWidth(msg.Width)
 		m.textarea.SetHeight(msg.Height - 3) // Reserve space for title and status
+		m.viewport.Width = msg.Width
+		m.viewport.Height = msg.Height - 3
 		return m, nil
 	}
 
-	// Don't update textarea if read-only or if there's an error (binary file)
-	if !m.readOnly && m.err == nil {
+	// Update the appropriate component based on read-only state
+	if m.readOnly && m.err == nil {
+		// Use viewport for read-only files (allows scrolling)
+		m.viewport, cmd = m.viewport.Update(msg)
+	} else if !m.readOnly && m.err == nil {
+		// Use textarea for writable files
 		m.textarea, cmd = m.textarea.Update(msg)
 	}
 	return m, cmd
@@ -243,10 +252,18 @@ func (m model) View() string {
 		statusBar = statusStyle.Render(m.status)
 	}
 
+	// Content area - use viewport for read-only, textarea for writable
+	var contentView string
+	if m.readOnly && m.err == nil {
+		contentView = m.viewport.View()
+	} else {
+		contentView = m.textarea.View()
+	}
+
 	return fmt.Sprintf(
 		"%s\n\n%s\n\n%s",
 		titleStyle.Render(title),
-		m.textarea.View(),
+		contentView,
 		statusBar,
 	)
 }
