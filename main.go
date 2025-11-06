@@ -85,31 +85,39 @@ func initialModel(filePath string) model {
 	// Check if filePath is a directory
 	if filePath != "" {
 		info, err := os.Stat(filePath)
-		if err == nil && info.IsDir() {
+		if err != nil {
+			m.status = fmt.Sprintf("Error: Error: %v | Ctrl-Q: Quit", err)
+			m.err = err
+			return m
+		}
+		if info.IsDir() {
 			// It's a directory, show filepicker
 			m.showPicker = true
 			m.filepicker.CurrentDirectory = filePath
-		} else if err == nil {
+		} else {
 			// It's a file, load it
 			content, err := os.ReadFile(filePath)
-			if err == nil {
-				// Check if file is text
-				if !isTextFile(content) {
-					m.status = "Error: Cannot open binary file. Please use a binary editor."
-					m.err = fmt.Errorf("binary file detected")
-					return m
-				}
-
-				// Check if file is read-only
-				if isReadOnly(filePath) {
-					m.readOnly = true
-					m.isWarning = true
-					m.status = "WARNING: File is read-only. Editing disabled. | Ctrl-Q: Quit"
-					ti.Blur() // Remove focus to indicate read-only
-				}
-
-				ti.SetValue(string(content))
+			if err != nil {
+				// Handle file read errors
+				m.status = fmt.Sprintf("Error: Cannot read file: %v | Ctrl-Q: Quit", err)
+				m.err = err
+				return m
 			}
+			// Check if file is text
+			if !isTextFile(content) {
+				m.status = "Error: Cannot open binary file. Please use a binary editor."
+				m.err = fmt.Errorf("binary file detected")
+				return m
+			}
+
+			// Check if file is read-only
+			if isReadOnly(filePath) {
+				m.readOnly = true
+				m.isWarning = true
+				m.status = "WARNING: File is read-only. Editing disabled. | Ctrl-Q: Quit"
+				ti.Blur() // Remove focus to indicate read-only
+			}
+			ti.SetValue(string(content))
 		}
 	}
 	return m

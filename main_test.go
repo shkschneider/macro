@@ -132,4 +132,10 @@ func TestInitialModel(t *testing.T) {
 	if m.err == nil {
 		t.Error("Expected error for binary file")
 	}
+
+	// Test with non-existent file
+	m = initialModel("/nonexistent/file/path.txt")
+	if m.err == nil {
+		t.Error("Expected error for non-existent file")
+	}
 }
