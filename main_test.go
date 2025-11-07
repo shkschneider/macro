@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -298,5 +299,86 @@ func TestBufferDialog(t *testing.T) {
 	m2.openBufferDialog()
 	if m2.showBufferDialog {
 		t.Error("Expected showBufferDialog to remain false when no buffers")
+	}
+}
+
+func TestHelpDialog(t *testing.T) {
+	m := initialModel("")
+
+	// Test opening help dialog
+	m.openHelpDialog()
+	if !m.showHelpDialog {
+		t.Error("Expected showHelpDialog to be true")
+	}
+	if len(m.allCommands) == 0 {
+		t.Error("Expected commands to be populated")
+	}
+	if len(m.filteredCommands) == 0 {
+		t.Error("Expected filtered commands to be populated initially")
+	}
+
+	// Test help fuzzy filtering
+	m.helpFilterInput.SetValue("file")
+	m.applyHelpFuzzyFilter()
+	if len(m.filteredCommands) == 0 {
+		t.Error("Expected at least one command matching 'file'")
+	}
+	
+	// Verify file-related commands are in results
+	foundFileCommand := false
+	for _, cmd := range m.filteredCommands {
+		if strings.Contains(cmd.command.name, "file") {
+			foundFileCommand = true
+			break
+		}
+	}
+	if !foundFileCommand {
+		t.Error("Expected to find file-related commands in filtered results")
+	}
+
+	// Test clearing filter
+	m.helpFilterInput.SetValue("")
+	m.applyHelpFuzzyFilter()
+	if len(m.filteredCommands) != len(m.allCommands) {
+		t.Errorf("Expected %d commands after clearing filter, got %d", len(m.allCommands), len(m.filteredCommands))
+	}
+
+	// Test closing help dialog
+	m.closeHelpDialog()
+	if m.showHelpDialog {
+		t.Error("Expected showHelpDialog to be false after closing")
+	}
+}
+
+func TestCommandSystem(t *testing.T) {
+	// Test getCommandByName
+	cmd := getCommandByName("file-save")
+	if cmd == nil {
+		t.Error("Expected to find file-save command")
+	}
+	if cmd.name != "file-save" {
+		t.Errorf("Expected command name to be 'file-save', got %s", cmd.name)
+	}
+
+	// Test non-existent command
+	cmd = getCommandByName("non-existent")
+	if cmd != nil {
+		t.Error("Expected nil for non-existent command")
+	}
+
+	// Test that all commands have required fields
+	for _, cmd := range getKeybindings() {
+		if cmd.name == "" {
+			t.Error("Command has empty name")
+		}
+		if cmd.key == "" {
+			t.Error("Command has empty key")
+		}
+		if cmd.description == "" {
+			t.Error("Command has empty description")
+		}
+		if cmd.execute == nil {
+			t.Errorf("Command %s has nil execute function", cmd.name)
+		}
 	}
 }
