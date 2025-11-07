@@ -133,6 +133,29 @@ func TestFileDialog(t *testing.T) {
 	if !m.showDialog {
 		t.Error("Expected showDialog to be true after openFileDialog")
 	}
+	if len(m.allFiles) != 3 {
+		t.Errorf("Expected 3 files in allFiles, got %d", len(m.allFiles))
+	}
+	if len(m.filteredFiles) != 3 {
+		t.Errorf("Expected 3 files in filteredFiles initially, got %d", len(m.filteredFiles))
+	}
+
+	// Test fuzzy filtering
+	m.filterInput.SetValue("go")
+	m.applyFuzzyFilter()
+	if len(m.filteredFiles) != 1 {
+		t.Errorf("Expected 1 file matching 'go', got %d", len(m.filteredFiles))
+	}
+	if len(m.filteredFiles) > 0 && m.filteredFiles[0].name != "file3.go" {
+		t.Errorf("Expected 'file3.go' to match, got %s", m.filteredFiles[0].name)
+	}
+
+	// Test clearing filter
+	m.filterInput.SetValue("")
+	m.applyFuzzyFilter()
+	if len(m.filteredFiles) != 3 {
+		t.Errorf("Expected 3 files after clearing filter, got %d", len(m.filteredFiles))
+	}
 
 	// Test closing dialog
 	m.closeFileDialog()

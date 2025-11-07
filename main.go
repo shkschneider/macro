@@ -9,9 +9,11 @@ import (
 	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/sahilm/fuzzy"
 )
 
 var (
@@ -36,7 +38,7 @@ var (
 				Foreground(lipgloss.Color("230")).
 				Padding(0, 1)
 
-	defaultMessage = "Ctrl-S: Save | Ctrl-Space: File Switcher | Ctrl-Q: Quit"
+	defaultMessage = "Ctrl-S: Save | Ctrl-Space: Files | Ctrl-Q: Quit"
 	termWidth      = 0 // Will be updated on WindowSizeMsg
 	termHeight     = 0 // Will be updated on WindowSizeMsg
 )
@@ -52,17 +54,21 @@ func (i fileItem) Title() string       { return i.name }
 func (i fileItem) Description() string { return "" }
 
 type model struct {
-	textarea   textarea.Model
-	viewport   viewport.Model
-	filepicker filepicker.Model
-	fileList   list.Model
-	filePath   string
-	message    string // Message line for errors/warnings/info
-	err        error
-	showPicker bool
-	showDialog bool
-	readOnly   bool
-	isWarning  bool
+	textarea    textarea.Model
+	viewport    viewport.Model
+	filepicker  filepicker.Model
+	fileList    list.Model
+	filterInput textinput.Model
+	allFiles    []fileItem      // All files in directory
+	filteredFiles []fileItem    // Filtered files based on input
+	selectedIdx int             // Selected file index in filtered list
+	filePath    string
+	message     string // Message line for errors/warnings/info
+	err         error
+	showPicker  bool
+	showDialog  bool
+	readOnly    bool
+	isWarning   bool
 }
 
 func initialModel(filePath string) model {
@@ -77,26 +83,36 @@ func initialModel(filePath string) model {
 
 	vp := viewport.New(80, 24)
 
-	// Initialize list for file dialog
+	// Initialize list for file dialog (filtering disabled, we handle it ourselves)
 	delegate := list.NewDefaultDelegate()
 	fileList := list.New([]list.Item{}, delegate, 0, 0)
 	fileList.Title = "File Switcher"
 	fileList.SetShowStatusBar(false)
-	fileList.SetFilteringEnabled(true)
+	fileList.SetFilteringEnabled(false) // Disable built-in filtering
 	fileList.Styles.Title = dialogTitleStyle
 
+	// Initialize text input for fuzzy filtering
+	ti := textinput.New()
+	ti.Placeholder = "Type to filter files..."
+	ti.CharLimit = 100
+	ti.Width = 50
+
 	m := model{
-		textarea:   ta,
-		viewport:   vp,
-		filepicker: fp,
-		fileList:   fileList,
-		filePath:   filePath,
-		message:    defaultMessage,
-		err:        nil,
-		showPicker: false,
-		showDialog: false,
-		readOnly:   false,
-		isWarning:  false,
+		textarea:      ta,
+		viewport:      vp,
+		filepicker:    fp,
+		fileList:      fileList,
+		filterInput:   ti,
+		allFiles:      []fileItem{},
+		filteredFiles: []fileItem{},
+		selectedIdx:   0,
+		filePath:      filePath,
+		message:       defaultMessage,
+		err:           nil,
+		showPicker:    false,
+		showDialog:    false,
+		readOnly:      false,
+		isWarning:     false,
 	}
 
 	if filePath != "" {
@@ -146,18 +162,18 @@ func (m *model) moveCursorToTop() {
 }
 
 // getFilesInDirectory returns a list of files in the directory of the current file
-func (m *model) getFilesInDirectory() []list.Item {
+func (m *model) getFilesInDirectory() []fileItem {
 	if m.filePath == "" {
-		return []list.Item{}
+		return []fileItem{}
 	}
 
 	dir := filepath.Dir(m.filePath)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return []list.Item{}
+		return []fileItem{}
 	}
 
-	var items []list.Item
+	var items []fileItem
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			fullPath := filepath.Join(dir, entry.Name())
@@ -170,6 +186,36 @@ func (m *model) getFilesInDirectory() []list.Item {
 	return items
 }
 
+// applyFuzzyFilter filters files based on the input text
+func (m *model) applyFuzzyFilter() {
+	query := m.filterInput.Value()
+	
+	if query == "" {
+		// No filter, show all files
+		m.filteredFiles = m.allFiles
+		m.selectedIdx = 0
+		return
+	}
+
+	// Build list of file names for fuzzy matching
+	var targets []string
+	for _, file := range m.allFiles {
+		targets = append(targets, file.name)
+	}
+
+	// Perform fuzzy search
+	matches := fuzzy.Find(query, targets)
+	
+	// Build filtered list based on matches
+	m.filteredFiles = []fileItem{}
+	for _, match := range matches {
+		m.filteredFiles = append(m.filteredFiles, m.allFiles[match.Index])
+	}
+
+	// Reset selection to first item
+	m.selectedIdx = 0
+}
+
 // openFileDialog opens the file switcher dialog
 func (m *model) openFileDialog() {
 	items := m.getFilesInDirectory()
@@ -178,13 +224,18 @@ func (m *model) openFileDialog() {
 		m.isWarning = true
 		return
 	}
-	m.fileList.SetItems(items)
+	m.allFiles = items
+	m.filteredFiles = items
+	m.selectedIdx = 0
+	m.filterInput.SetValue("")
+	m.filterInput.Focus()
 	m.showDialog = true
 }
 
 // closeFileDialog closes the file switcher dialog
 func (m *model) closeFileDialog() {
 	m.showDialog = false
+	m.filterInput.Blur()
 	m.message = defaultMessage
 	m.isWarning = false
 }
@@ -267,13 +318,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "ctrl+q":
 				return m, tea.Quit
-			case "esc", "ctrl+space":
+			case "esc", "ctrl+space", "ctrl+c":
 				// Close dialog
 				m.closeFileDialog()
 				return m, nil
 			case "enter":
-				// Select file from list
-				if item, ok := m.fileList.SelectedItem().(fileItem); ok {
+				// Select file from filtered list
+				if m.selectedIdx >= 0 && m.selectedIdx < len(m.filteredFiles) {
+					item := m.filteredFiles[m.selectedIdx]
 					// Load the selected file
 					content, err := os.ReadFile(item.path)
 					if err == nil {
@@ -302,6 +354,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.closeFileDialog()
 					return m, nil
 				}
+			case "up", "ctrl+k":
+				// Move selection up
+				if m.selectedIdx > 0 {
+					m.selectedIdx--
+				}
+				return m, nil
+			case "down", "ctrl+j":
+				// Move selection down
+				if m.selectedIdx < len(m.filteredFiles)-1 {
+					m.selectedIdx++
+				}
+				return m, nil
 			}
 		case tea.WindowSizeMsg:
 			// Update dialog size - fixed to 50% width and height
@@ -313,14 +377,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if dialogHeight < 10 {
 				dialogHeight = 10
 			}
-			m.fileList.SetSize(dialogWidth, dialogHeight)
+			m.filterInput.Width = dialogWidth - 4 // Account for padding
 			termWidth = msg.Width
 			termHeight = msg.Height
 			return m, nil
 		}
 
-		// Update the list
-		m.fileList, cmd = m.fileList.Update(msg)
+		// Update the text input
+		var cmd tea.Cmd
+		m.filterInput, cmd = m.filterInput.Update(msg)
+		
+		// Apply fuzzy filter after input changes
+		m.applyFuzzyFilter()
+		
 		return m, cmd
 	}
 
@@ -448,14 +517,89 @@ func (m model) View() string {
 
 // renderDialog renders the file dialog with its border and title
 func (m model) renderDialog() string {
-	dialogContent := m.fileList.View()
+	// Calculate dialog dimensions
+	dialogWidth := termWidth / 2
+	dialogHeight := termHeight / 2
+	if dialogWidth < 40 {
+		dialogWidth = 40
+	}
+	if dialogHeight < 10 {
+		dialogHeight = 10
+	}
+
+	// Build file list view
+	var fileListView strings.Builder
+	listHeight := dialogHeight - 6 // Reserve space for title, input, and padding
 	
-	// Add instructions at the bottom
+	startIdx := 0
+	endIdx := len(m.filteredFiles)
+	
+	// Calculate visible range (scroll if needed)
+	if endIdx > listHeight {
+		// Ensure selected item is visible
+		if m.selectedIdx >= listHeight {
+			startIdx = m.selectedIdx - listHeight + 1
+		}
+		endIdx = startIdx + listHeight
+		if endIdx > len(m.filteredFiles) {
+			endIdx = len(m.filteredFiles)
+		}
+	}
+
+	// Render visible files
+	for i := startIdx; i < endIdx; i++ {
+		file := m.filteredFiles[i]
+		line := ""
+		if i == m.selectedIdx {
+			// Selected item
+			line = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("0")).
+				Background(lipgloss.Color("63")).
+				Width(dialogWidth - 4).
+				Render("> " + file.name)
+		} else {
+			// Normal item
+			line = lipgloss.NewStyle().
+				Width(dialogWidth - 4).
+				Render("  " + file.name)
+		}
+		fileListView.WriteString(line + "\n")
+	}
+	
+	// Pad the list if needed
+	linesRendered := endIdx - startIdx
+	for i := linesRendered; i < listHeight; i++ {
+		fileListView.WriteString(strings.Repeat(" ", dialogWidth-4) + "\n")
+	}
+
+	// Build the complete dialog content
+	title := dialogTitleStyle.Render("File Switcher")
+	fileCount := fmt.Sprintf("(%d/%d files)", len(m.filteredFiles), len(m.allFiles))
+	titleLine := lipgloss.NewStyle().
+		Width(dialogWidth - 4).
+		Render(title + " " + lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render(fileCount))
+	
+	separator := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("241")).
+		Render(strings.Repeat("─", dialogWidth-4))
+	
+	inputLabel := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("241")).
+		Render("Filter: ")
+	
+	inputView := inputLabel + m.filterInput.View()
+	
 	instructions := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("241")).
-		Render("↑/↓: Navigate | /: Filter | Enter: Open | Esc: Close")
-	
-	fullContent := dialogContent + "\n" + instructions
+		Render("↑/↓: Navigate | Enter: Open | Esc: Close")
+
+	fullContent := fmt.Sprintf("%s\n%s\n%s\n%s\n%s",
+		titleLine,
+		separator,
+		strings.TrimRight(fileListView.String(), "\n"),
+		inputView,
+		instructions,
+	)
 	
 	return dialogBoxStyle.Render(fullContent)
 }
