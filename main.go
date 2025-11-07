@@ -42,8 +42,8 @@ type model struct {
 func initialModel(filePath string) model {
 	ta := textarea.New()
 	ta.Focus()
-	ta.Prompt = ""
-	ta.ShowLineNumbers = true
+	ta.Prompt = ""              // Remove default border on the left
+	ta.ShowLineNumbers = true   // Enable line numbers for better navigation
 
 	fp := filepicker.New()
 	fp.DirAllowed = false
