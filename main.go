@@ -42,7 +42,8 @@ type model struct {
 func initialModel(filePath string) model {
 	ta := textarea.New()
 	ta.Focus()
-	ta.ShowLineNumbers = false
+	ta.Prompt = ""              // Remove default border on the left
+	ta.ShowLineNumbers = true   // Enable line numbers for better navigation
 
 	fp := filepicker.New()
 	fp.DirAllowed = false
@@ -89,13 +90,23 @@ func initialModel(filePath string) model {
 				m.message = "WARNING: File is read-only. Editing disabled. | Ctrl-Q: Quit"
 				// Use viewport for read-only files
 				m.viewport.SetContent(string(content))
+				m.viewport.GotoTop()
 			} else {
 				// Use textarea for writable files
 				m.textarea.SetValue(string(content))
+				m.moveCursorToTop()
 			}
 		}
 	}
 	return m
+}
+
+// moveCursorToTop moves the textarea cursor to position (0,0)
+func (m *model) moveCursorToTop() {
+	m.textarea.CursorStart()
+	for m.textarea.Line() > 0 {
+		m.textarea.CursorUp()
+	}
 }
 
 func (m model) Init() tea.Cmd {
@@ -141,6 +152,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			content, err := os.ReadFile(path)
 			if err == nil {
 				m.textarea.SetValue(string(content))
+				m.moveCursorToTop()
 				m.message = defaultMessage
 				m.err = nil
 			} else {
