@@ -38,7 +38,7 @@ var (
 				Foreground(lipgloss.Color("230")).
 				Padding(0, 1)
 
-	defaultMessage = "Ctrl-S: Save | Ctrl-Space: Files | Ctrl-Q: Quit"
+	defaultMessage = "Ctrl-S: Save | Ctrl-Space: Files | Ctrl-B: Buffers | Ctrl-Q: Quit"
 	termWidth      = 0 // Will be updated on WindowSizeMsg
 	termHeight     = 0 // Will be updated on WindowSizeMsg
 )
@@ -53,22 +53,45 @@ func (i fileItem) FilterValue() string { return i.name }
 func (i fileItem) Title() string       { return i.name }
 func (i fileItem) Description() string { return "" }
 
+// Buffer represents an open file with its state
+type Buffer struct {
+	filePath string
+	content  string
+	readOnly bool
+}
+
+// bufferItem implements list.Item interface for the buffer dialog
+type bufferItem struct {
+	name  string
+	index int
+}
+
+func (i bufferItem) FilterValue() string { return i.name }
+func (i bufferItem) Title() string       { return i.name }
+func (i bufferItem) Description() string { return "" }
+
 type model struct {
-	textarea    textarea.Model
-	viewport    viewport.Model
-	filepicker  filepicker.Model
-	fileList    list.Model
-	filterInput textinput.Model
-	allFiles    []fileItem      // All files in directory
-	filteredFiles []fileItem    // Filtered files based on input
-	selectedIdx int             // Selected file index in filtered list
-	filePath    string
-	message     string // Message line for errors/warnings/info
-	err         error
-	showPicker  bool
-	showDialog  bool
-	readOnly    bool
-	isWarning   bool
+	textarea       textarea.Model
+	viewport       viewport.Model
+	filepicker     filepicker.Model
+	fileList       list.Model
+	bufferList     list.Model
+	filterInput    textinput.Model
+	bufferFilterInput textinput.Model
+	allFiles       []fileItem      // All files in directory
+	filteredFiles  []fileItem      // Filtered files based on input
+	allBuffers     []bufferItem    // All buffers for buffer dialog
+	filteredBuffers []bufferItem   // Filtered buffers based on input
+	selectedIdx    int             // Selected file index in filtered list
+	bufferSelectedIdx int          // Selected buffer index in filtered list
+	buffers        []Buffer        // All open buffers
+	currentBuffer  int             // Index of current buffer
+	message        string          // Message line for errors/warnings/info
+	err            error
+	showPicker     bool
+	showDialog     bool
+	showBufferDialog bool
+	dialogType     string          // "file" or "buffer"
 }
 
 func initialModel(filePath string) model {
@@ -91,28 +114,47 @@ func initialModel(filePath string) model {
 	fileList.SetFilteringEnabled(false) // Disable built-in filtering
 	fileList.Styles.Title = dialogTitleStyle
 
+	// Initialize list for buffer dialog
+	bufferList := list.New([]list.Item{}, delegate, 0, 0)
+	bufferList.Title = "Buffer Switcher"
+	bufferList.SetShowStatusBar(false)
+	bufferList.SetFilteringEnabled(false)
+	bufferList.Styles.Title = dialogTitleStyle
+
 	// Initialize text input for fuzzy filtering
 	ti := textinput.New()
 	ti.Placeholder = "Type to filter files..."
 	ti.CharLimit = 100
 	ti.Width = 50
 
+	// Initialize text input for buffer filtering
+	bti := textinput.New()
+	bti.Placeholder = "Type to filter buffers..."
+	bti.CharLimit = 100
+	bti.Width = 50
+
 	m := model{
-		textarea:      ta,
-		viewport:      vp,
-		filepicker:    fp,
-		fileList:      fileList,
-		filterInput:   ti,
-		allFiles:      []fileItem{},
-		filteredFiles: []fileItem{},
-		selectedIdx:   0,
-		filePath:      filePath,
-		message:       defaultMessage,
-		err:           nil,
-		showPicker:    false,
-		showDialog:    false,
-		readOnly:      false,
-		isWarning:     false,
+		textarea:          ta,
+		viewport:          vp,
+		filepicker:        fp,
+		fileList:          fileList,
+		bufferList:        bufferList,
+		filterInput:       ti,
+		bufferFilterInput: bti,
+		allFiles:          []fileItem{},
+		filteredFiles:     []fileItem{},
+		allBuffers:        []bufferItem{},
+		filteredBuffers:   []bufferItem{},
+		selectedIdx:       0,
+		bufferSelectedIdx: 0,
+		buffers:           []Buffer{},
+		currentBuffer:     -1, // No buffer open initially
+		message:           defaultMessage,
+		err:               nil,
+		showPicker:        false,
+		showDialog:        false,
+		showBufferDialog:  false,
+		dialogType:        "",
 	}
 
 	if filePath != "" {
@@ -127,7 +169,7 @@ func initialModel(filePath string) model {
 			m.showPicker = true
 			m.filepicker.CurrentDirectory = filePath
 		} else {
-			// It's a file, load it
+			// It's a file, load it into first buffer
 			content, err := os.ReadFile(filePath)
 			if err != nil {
 				// Handle file read errors
@@ -136,18 +178,19 @@ func initialModel(filePath string) model {
 				return m
 			}
 			// Check if file is read-only
-			if info.Mode()&0200 == 0 {
-				m.readOnly = true
-				m.isWarning = true
-				m.message = "WARNING: File is read-only. Editing disabled. | Ctrl-Q: Quit"
-				// Use viewport for read-only files
-				m.viewport.SetContent(string(content))
-				m.viewport.GotoTop()
-			} else {
-				// Use textarea for writable files
-				m.textarea.SetValue(string(content))
-				m.moveCursorToTop()
+			readOnly := info.Mode()&0200 == 0
+			
+			// Create initial buffer
+			buf := Buffer{
+				filePath: filePath,
+				content:  string(content),
+				readOnly: readOnly,
 			}
+			m.buffers = append(m.buffers, buf)
+			m.currentBuffer = 0
+			
+			// Load buffer into UI
+			m.loadBuffer(0)
 		}
 	}
 	return m
@@ -161,13 +204,81 @@ func (m *model) moveCursorToTop() {
 	}
 }
 
+// loadBuffer loads a buffer's content into the UI (textarea or viewport)
+func (m *model) loadBuffer(idx int) {
+	if idx < 0 || idx >= len(m.buffers) {
+		return
+	}
+	
+	buf := m.buffers[idx]
+	
+	if buf.readOnly {
+		m.viewport.SetContent(buf.content)
+		m.viewport.GotoTop()
+		m.message = "WARNING: File is read-only. Editing disabled."
+	} else {
+		m.textarea.SetValue(buf.content)
+		m.moveCursorToTop()
+		m.message = defaultMessage
+	}
+	m.currentBuffer = idx
+}
+
+// saveCurrentBufferState saves the current UI state to the current buffer
+func (m *model) saveCurrentBufferState() {
+	if m.currentBuffer < 0 || m.currentBuffer >= len(m.buffers) {
+		return
+	}
+	
+	buf := &m.buffers[m.currentBuffer]
+	if !buf.readOnly {
+		buf.content = m.textarea.Value()
+	}
+}
+
+// addBuffer adds a new buffer or switches to existing one if file already open
+func (m *model) addBuffer(filePath string, content string, readOnly bool) int {
+	// Check if buffer already exists
+	for i, buf := range m.buffers {
+		if buf.filePath == filePath {
+			return i // Return existing buffer index
+		}
+	}
+	
+	// Create new buffer
+	buf := Buffer{
+		filePath: filePath,
+		content:  content,
+		readOnly: readOnly,
+	}
+	m.buffers = append(m.buffers, buf)
+	return len(m.buffers) - 1
+}
+
+// getCurrentFilePath returns the file path of the current buffer
+func (m *model) getCurrentFilePath() string {
+	if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
+		return m.buffers[m.currentBuffer].filePath
+	}
+	return ""
+}
+
+// isCurrentBufferReadOnly returns whether the current buffer is read-only
+func (m *model) isCurrentBufferReadOnly() bool {
+	if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
+		return m.buffers[m.currentBuffer].readOnly
+	}
+	return false
+}
+
 // getFilesInDirectory returns a list of files in the directory of the current file
 func (m *model) getFilesInDirectory() []fileItem {
-	if m.filePath == "" {
+	filePath := m.getCurrentFilePath()
+	if filePath == "" {
 		return []fileItem{}
 	}
 
-	dir := filepath.Dir(m.filePath)
+	dir := filepath.Dir(filePath)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return []fileItem{}
@@ -216,12 +327,41 @@ func (m *model) applyFuzzyFilter() {
 	m.selectedIdx = 0
 }
 
+// applyBufferFuzzyFilter filters buffers based on the input text
+func (m *model) applyBufferFuzzyFilter() {
+	query := m.bufferFilterInput.Value()
+	
+	if query == "" {
+		// No filter, show all buffers
+		m.filteredBuffers = m.allBuffers
+		m.bufferSelectedIdx = 0
+		return
+	}
+
+	// Build list of buffer names for fuzzy matching
+	var targets []string
+	for _, buffer := range m.allBuffers {
+		targets = append(targets, buffer.name)
+	}
+
+	// Perform fuzzy search
+	matches := fuzzy.Find(query, targets)
+	
+	// Build filtered list based on matches
+	m.filteredBuffers = []bufferItem{}
+	for _, match := range matches {
+		m.filteredBuffers = append(m.filteredBuffers, m.allBuffers[match.Index])
+	}
+
+	// Reset selection to first item
+	m.bufferSelectedIdx = 0
+}
+
 // openFileDialog opens the file switcher dialog
 func (m *model) openFileDialog() {
 	items := m.getFilesInDirectory()
 	if len(items) == 0 {
 		m.message = "No files found in current directory"
-		m.isWarning = true
 		return
 	}
 	m.allFiles = items
@@ -230,6 +370,7 @@ func (m *model) openFileDialog() {
 	m.filterInput.SetValue("")
 	m.filterInput.Focus()
 	m.showDialog = true
+	m.dialogType = "file"
 }
 
 // closeFileDialog closes the file switcher dialog
@@ -237,7 +378,43 @@ func (m *model) closeFileDialog() {
 	m.showDialog = false
 	m.filterInput.Blur()
 	m.message = defaultMessage
-	m.isWarning = false
+}
+
+// openBufferDialog opens the buffer switcher dialog
+func (m *model) openBufferDialog() {
+	if len(m.buffers) == 0 {
+		m.message = "No buffers open"
+		return
+	}
+	
+	// Build buffer list
+	m.allBuffers = []bufferItem{}
+	for i, buf := range m.buffers {
+		name := filepath.Base(buf.filePath)
+		if buf.readOnly {
+			name += " [RO]"
+		}
+		if i == m.currentBuffer {
+			name = "* " + name
+		}
+		m.allBuffers = append(m.allBuffers, bufferItem{
+			name:  name,
+			index: i,
+		})
+	}
+	m.filteredBuffers = m.allBuffers
+	m.bufferSelectedIdx = 0
+	m.bufferFilterInput.SetValue("")
+	m.bufferFilterInput.Focus()
+	m.showBufferDialog = true
+	m.dialogType = "buffer"
+}
+
+// closeBufferDialog closes the buffer switcher dialog
+func (m *model) closeBufferDialog() {
+	m.showBufferDialog = false
+	m.bufferFilterInput.Blur()
+	m.message = defaultMessage
 }
 
 func (m model) Init() tea.Cmd {
@@ -278,12 +455,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Check if file was selected
 		if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
-			// Load the selected file
-			m.filePath = path
+			// Load the selected file into a new buffer
 			content, err := os.ReadFile(path)
 			if err == nil {
-				m.textarea.SetValue(string(content))
-				m.moveCursorToTop()
+				info, statErr := os.Stat(path)
+				readOnly := false
+				if statErr == nil {
+					readOnly = info.Mode()&0200 == 0
+				}
+				
+				// Add buffer and switch to it
+				bufferIdx := m.addBuffer(path, string(content), readOnly)
+				m.loadBuffer(bufferIdx)
 				m.message = defaultMessage
 				m.err = nil
 			} else {
@@ -312,58 +495,86 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// If showing dialog, handle dialog messages
-	if m.showDialog {
+	if m.showDialog || m.showBufferDialog {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			switch msg.String() {
 			case "ctrl+q":
 				return m, tea.Quit
-			case "esc", "ctrl+space", "ctrl+c":
+			case "esc", "ctrl+space", "ctrl+b", "ctrl+c":
 				// Close dialog
-				m.closeFileDialog()
+				if m.showDialog {
+					m.closeFileDialog()
+				} else if m.showBufferDialog {
+					m.closeBufferDialog()
+				}
 				return m, nil
 			case "enter":
-				// Select file from filtered list
-				if m.selectedIdx >= 0 && m.selectedIdx < len(m.filteredFiles) {
-					item := m.filteredFiles[m.selectedIdx]
-					// Load the selected file
-					content, err := os.ReadFile(item.path)
-					if err == nil {
-						m.filePath = item.path
+				if m.showDialog {
+					// Select file from filtered list
+					if m.selectedIdx >= 0 && m.selectedIdx < len(m.filteredFiles) {
+						item := m.filteredFiles[m.selectedIdx]
+						// Save current buffer state before switching
+						m.saveCurrentBufferState()
 						
-						// Check if file is read-only
-						info, statErr := os.Stat(item.path)
-						if statErr == nil && info.Mode()&0200 == 0 {
-							m.readOnly = true
-							m.isWarning = true
-							m.message = "WARNING: File is read-only. Editing disabled. | Ctrl-Q: Quit"
-							m.viewport.SetContent(string(content))
-							m.viewport.GotoTop()
-						} else {
-							m.readOnly = false
-							m.isWarning = false
-							m.textarea.SetValue(string(content))
-							m.moveCursorToTop()
+						// Load the selected file into a new buffer
+						content, err := os.ReadFile(item.path)
+						if err == nil {
+							// Check if file is read-only
+							info, statErr := os.Stat(item.path)
+							readOnly := false
+							if statErr == nil {
+								readOnly = info.Mode()&0200 == 0
+							}
+							
+							// Add buffer and switch to it
+							bufferIdx := m.addBuffer(item.path, string(content), readOnly)
+							m.loadBuffer(bufferIdx)
 							m.message = fmt.Sprintf("Opened %s", item.name)
+							m.err = nil
+						} else {
+							m.message = fmt.Sprintf("Error loading file: %v", err)
+							m.err = err
 						}
-						m.err = nil
-					} else {
-						m.message = fmt.Sprintf("Error loading file: %v", err)
-						m.err = err
+						m.closeFileDialog()
+						return m, nil
 					}
-					m.closeFileDialog()
-					return m, nil
+				} else if m.showBufferDialog {
+					// Select buffer from filtered list
+					if m.bufferSelectedIdx >= 0 && m.bufferSelectedIdx < len(m.filteredBuffers) {
+						item := m.filteredBuffers[m.bufferSelectedIdx]
+						// Save current buffer state before switching
+						m.saveCurrentBufferState()
+						
+						// Switch to selected buffer
+						m.loadBuffer(item.index)
+						m.message = fmt.Sprintf("Switched to %s", m.buffers[item.index].filePath)
+						m.closeBufferDialog()
+						return m, nil
+					}
 				}
 			case "up", "ctrl+k":
 				// Move selection up
-				if m.selectedIdx > 0 {
-					m.selectedIdx--
+				if m.showDialog {
+					if m.selectedIdx > 0 {
+						m.selectedIdx--
+					}
+				} else if m.showBufferDialog {
+					if m.bufferSelectedIdx > 0 {
+						m.bufferSelectedIdx--
+					}
 				}
 				return m, nil
 			case "down", "ctrl+j":
 				// Move selection down
-				if m.selectedIdx < len(m.filteredFiles)-1 {
-					m.selectedIdx++
+				if m.showDialog {
+					if m.selectedIdx < len(m.filteredFiles)-1 {
+						m.selectedIdx++
+					}
+				} else if m.showBufferDialog {
+					if m.bufferSelectedIdx < len(m.filteredBuffers)-1 {
+						m.bufferSelectedIdx++
+					}
 				}
 				return m, nil
 			}
@@ -378,17 +589,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				dialogHeight = 10
 			}
 			m.filterInput.Width = dialogWidth - 4 // Account for padding
+			m.bufferFilterInput.Width = dialogWidth - 4
 			termWidth = msg.Width
 			termHeight = msg.Height
 			return m, nil
 		}
 
-		// Update the text input
+		// Update the appropriate text input based on dialog type
 		var cmd tea.Cmd
-		m.filterInput, cmd = m.filterInput.Update(msg)
-		
-		// Apply fuzzy filter after input changes
-		m.applyFuzzyFilter()
+		if m.showDialog {
+			m.filterInput, cmd = m.filterInput.Update(msg)
+			// Apply fuzzy filter after input changes
+			m.applyFuzzyFilter()
+		} else if m.showBufferDialog {
+			m.bufferFilterInput, cmd = m.bufferFilterInput.Update(msg)
+			// Apply buffer fuzzy filter after input changes
+			m.applyBufferFuzzyFilter()
+		}
 		
 		return m, cmd
 	}
@@ -400,21 +617,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlQ:
 			return m, tea.Quit
 		case tea.KeyCtrlS:
-			if m.readOnly {
-				m.message = "WARNING: Cannot save - file is read-only | Ctrl-Q: Quit"
-				m.isWarning = true
+			readOnly := m.isCurrentBufferReadOnly()
+			if readOnly {
+				m.message = "WARNING: Cannot save - file is read-only"
 				return m, nil
 			}
-			if m.filePath == "" {
+			filePath := m.getCurrentFilePath()
+			if filePath == "" {
 				m.message = "Error: No filename specified. Usage: macro <filename>"
 				m.err = fmt.Errorf("no filename")
 			} else {
-				err := os.WriteFile(m.filePath, []byte(m.textarea.Value()), 0644)
+				// Save current buffer state first
+				m.saveCurrentBufferState()
+				err := os.WriteFile(filePath, []byte(m.textarea.Value()), 0644)
 				if err != nil {
 					m.message = fmt.Sprintf("Error saving: %v", err)
 					m.err = err
 				} else {
-					m.message = fmt.Sprintf("Saved to %s | Ctrl-S: Save | Ctrl-Q: Quit", m.filePath)
+					m.message = fmt.Sprintf("Saved to %s", filePath)
 					m.err = nil
 				}
 			}
@@ -423,6 +643,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Check for Ctrl-Space using string matching
 		if msg.String() == "ctrl+ " {
 			m.openFileDialog()
+			return m, nil
+		}
+		// Check for Ctrl-B to open buffer dialog
+		if msg.String() == "ctrl+b" {
+			m.openBufferDialog()
 			return m, nil
 		}
 	case tea.WindowSizeMsg:
@@ -446,10 +671,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Update the appropriate component based on read-only state
-	if m.readOnly && m.err == nil {
+	readOnly := m.isCurrentBufferReadOnly()
+	if readOnly && m.err == nil {
 		// Use viewport for read-only files (allows scrolling)
 		m.viewport, cmd = m.viewport.Update(msg)
-	} else if !m.readOnly && m.err == nil {
+	} else if !readOnly && m.err == nil {
 		// Use textarea for writable files
 		m.textarea, cmd = m.textarea.Update(msg)
 	}
@@ -467,7 +693,8 @@ func (m model) View() string {
 
 	// Content area - use viewport for read-only, textarea for writable
 	var contentView string
-	if m.readOnly && m.err == nil {
+	readOnly := m.isCurrentBufferReadOnly()
+	if readOnly && m.err == nil {
 		contentView = m.viewport.View()
 	} else {
 		contentView = m.textarea.View()
@@ -475,9 +702,10 @@ func (m model) View() string {
 
 	// Build status bar with file info
 	statusInfo := ""
-	if m.filePath != "" {
-		statusInfo = m.filePath
-		if m.readOnly {
+	filePath := m.getCurrentFilePath()
+	if filePath != "" {
+		statusInfo = filePath
+		if readOnly {
 			statusInfo += " [READ-ONLY]"
 		}
 	} else {
@@ -491,7 +719,7 @@ func (m model) View() string {
 	var messageLine string
 	if m.err != nil {
 		messageLine = errorStyle.Render(m.message)
-	} else if m.isWarning {
+	} else if strings.Contains(m.message, "WARNING") || strings.Contains(m.message, "read-only") {
 		messageLine = warningStyle.Render(m.message)
 	} else if m.message != defaultMessage {
 		messageLine = successStyle.Render(m.message)
@@ -508,15 +736,19 @@ func (m model) View() string {
 
 	// If showing dialog, overlay it on top of the base view
 	if m.showDialog {
-		dialog := m.renderDialog()
+		dialog := m.renderFileDialog()
+		return m.overlayDialog(baseView, dialog)
+	}
+	if m.showBufferDialog {
+		dialog := m.renderBufferDialog()
 		return m.overlayDialog(baseView, dialog)
 	}
 
 	return baseView
 }
 
-// renderDialog renders the file dialog with its border and title
-func (m model) renderDialog() string {
+// renderFileDialog renders the file dialog with its border and title
+func (m model) renderFileDialog() string {
 	// Calculate dialog dimensions
 	dialogWidth := termWidth / 2
 	dialogHeight := termHeight / 2
@@ -597,6 +829,95 @@ func (m model) renderDialog() string {
 		titleLine,
 		separator,
 		strings.TrimRight(fileListView.String(), "\n"),
+		inputView,
+		instructions,
+	)
+	
+	return dialogBoxStyle.Render(fullContent)
+}
+
+// renderBufferDialog renders the buffer dialog with its border and title
+func (m model) renderBufferDialog() string {
+	// Calculate dialog dimensions
+	dialogWidth := termWidth / 2
+	dialogHeight := termHeight / 2
+	if dialogWidth < 40 {
+		dialogWidth = 40
+	}
+	if dialogHeight < 10 {
+		dialogHeight = 10
+	}
+
+	// Build buffer list view
+	var bufferListView strings.Builder
+	listHeight := dialogHeight - 6 // Reserve space for title, input, and padding
+	
+	startIdx := 0
+	endIdx := len(m.filteredBuffers)
+	
+	// Calculate visible range (scroll if needed)
+	if endIdx > listHeight {
+		// Ensure selected item is visible
+		if m.bufferSelectedIdx >= listHeight {
+			startIdx = m.bufferSelectedIdx - listHeight + 1
+		}
+		endIdx = startIdx + listHeight
+		if endIdx > len(m.filteredBuffers) {
+			endIdx = len(m.filteredBuffers)
+		}
+	}
+
+	// Render visible buffers
+	for i := startIdx; i < endIdx; i++ {
+		buffer := m.filteredBuffers[i]
+		line := ""
+		if i == m.bufferSelectedIdx {
+			// Selected item
+			line = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("0")).
+				Background(lipgloss.Color("63")).
+				Width(dialogWidth - 4).
+				Render("> " + buffer.name)
+		} else {
+			// Normal item
+			line = lipgloss.NewStyle().
+				Width(dialogWidth - 4).
+				Render("  " + buffer.name)
+		}
+		bufferListView.WriteString(line + "\n")
+	}
+	
+	// Pad the list if needed
+	linesRendered := endIdx - startIdx
+	for i := linesRendered; i < listHeight; i++ {
+		bufferListView.WriteString(strings.Repeat(" ", dialogWidth-4) + "\n")
+	}
+
+	// Build the complete dialog content
+	title := dialogTitleStyle.Render("Buffer Switcher")
+	bufferCount := fmt.Sprintf("(%d/%d buffers)", len(m.filteredBuffers), len(m.allBuffers))
+	titleLine := lipgloss.NewStyle().
+		Width(dialogWidth - 4).
+		Render(title + " " + lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render(bufferCount))
+	
+	separator := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("241")).
+		Render(strings.Repeat("─", dialogWidth-4))
+	
+	inputLabel := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("241")).
+		Render("Filter: ")
+	
+	inputView := inputLabel + m.bufferFilterInput.View()
+	
+	instructions := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("241")).
+		Render("↑/↓: Navigate | Enter: Switch | Esc: Close")
+
+	fullContent := fmt.Sprintf("%s\n%s\n%s\n%s\n%s",
+		titleLine,
+		separator,
+		strings.TrimRight(bufferListView.String(), "\n"),
 		inputView,
 		instructions,
 	)

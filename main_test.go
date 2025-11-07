@@ -8,14 +8,14 @@ import (
 func TestInitialModel(t *testing.T) {
 	// Test with no file
 	m := initialModel("")
-	if m.filePath != "" {
-		t.Errorf("Expected empty filePath, got %s", m.filePath)
+	if m.getCurrentFilePath() != "" {
+		t.Errorf("Expected empty filePath, got %s", m.getCurrentFilePath())
 	}
 	if m.err != nil {
 		t.Errorf("Expected no error, got %v", m.err)
 	}
-	if m.readOnly {
-		t.Error("Expected readOnly to be false")
+	if len(m.buffers) != 0 {
+		t.Error("Expected no buffers initially")
 	}
 
 	// Test with text file
@@ -31,18 +31,18 @@ func TestInitialModel(t *testing.T) {
 	if m.err != nil {
 		t.Errorf("Expected no error for text file, got %v", m.err)
 	}
-	if m.readOnly {
+	if len(m.buffers) != 1 {
+		t.Errorf("Expected 1 buffer, got %d", len(m.buffers))
+	}
+	if m.isCurrentBufferReadOnly() {
 		t.Error("Expected writable file to not be read-only")
 	}
 
 	// Test with read-only file
 	os.Chmod(tmpFile.Name(), 0444)
 	m = initialModel(tmpFile.Name())
-	if !m.readOnly {
+	if !m.isCurrentBufferReadOnly() {
 		t.Error("Expected read-only file to set readOnly flag")
-	}
-	if !m.isWarning {
-		t.Error("Expected isWarning to be true for read-only file")
 	}
 
 	// Test with directory
@@ -168,5 +168,135 @@ func TestFileDialog(t *testing.T) {
 	files2 := m2.getFilesInDirectory()
 	if len(files2) != 0 {
 		t.Errorf("Expected 0 files when no file path, got %d", len(files2))
+	}
+}
+
+func TestBufferManagement(t *testing.T) {
+	// Create temporary files
+	tmpDir, err := os.MkdirTemp("", "test_buffers_*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	file1Path := tmpDir + "/file1.txt"
+	file2Path := tmpDir + "/file2.txt"
+	
+	err = os.WriteFile(file1Path, []byte("content1"), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = os.WriteFile(file2Path, []byte("content2"), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Initialize with first file
+	m := initialModel(file1Path)
+	if len(m.buffers) != 1 {
+		t.Errorf("Expected 1 buffer, got %d", len(m.buffers))
+	}
+	if m.currentBuffer != 0 {
+		t.Errorf("Expected currentBuffer to be 0, got %d", m.currentBuffer)
+	}
+
+	// Add second buffer
+	idx := m.addBuffer(file2Path, "content2", false)
+	if idx != 1 {
+		t.Errorf("Expected new buffer index to be 1, got %d", idx)
+	}
+	if len(m.buffers) != 2 {
+		t.Errorf("Expected 2 buffers, got %d", len(m.buffers))
+	}
+
+	// Try to add same file again (should return existing buffer index)
+	idx2 := m.addBuffer(file1Path, "content1", false)
+	if idx2 != 0 {
+		t.Errorf("Expected existing buffer index to be 0, got %d", idx2)
+	}
+	if len(m.buffers) != 2 {
+		t.Errorf("Expected still 2 buffers, got %d", len(m.buffers))
+	}
+
+	// Test switching buffers
+	m.loadBuffer(1)
+	if m.currentBuffer != 1 {
+		t.Errorf("Expected currentBuffer to be 1, got %d", m.currentBuffer)
+	}
+	if m.getCurrentFilePath() != file2Path {
+		t.Errorf("Expected current file path to be %s, got %s", file2Path, m.getCurrentFilePath())
+	}
+
+	// Test saveCurrentBufferState
+	m.textarea.SetValue("modified content2")
+	m.saveCurrentBufferState()
+	if m.buffers[1].content != "modified content2" {
+		t.Errorf("Expected buffer content to be updated, got %s", m.buffers[1].content)
+	}
+}
+
+func TestBufferDialog(t *testing.T) {
+	// Create temporary files
+	tmpDir, err := os.MkdirTemp("", "test_buffer_dialog_*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	file1Path := tmpDir + "/file1.txt"
+	file2Path := tmpDir + "/file2.txt"
+	
+	err = os.WriteFile(file1Path, []byte("content1"), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = os.WriteFile(file2Path, []byte("content2"), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Initialize with first file
+	m := initialModel(file1Path)
+	
+	// Add second buffer
+	m.addBuffer(file2Path, "content2", false)
+
+	// Test opening buffer dialog
+	m.openBufferDialog()
+	if !m.showBufferDialog {
+		t.Error("Expected showBufferDialog to be true")
+	}
+	if len(m.allBuffers) != 2 {
+		t.Errorf("Expected 2 buffers in allBuffers, got %d", len(m.allBuffers))
+	}
+	if len(m.filteredBuffers) != 2 {
+		t.Errorf("Expected 2 buffers in filteredBuffers initially, got %d", len(m.filteredBuffers))
+	}
+
+	// Test buffer fuzzy filtering
+	m.bufferFilterInput.SetValue("file1")
+	m.applyBufferFuzzyFilter()
+	if len(m.filteredBuffers) != 1 {
+		t.Errorf("Expected 1 buffer matching 'file1', got %d", len(m.filteredBuffers))
+	}
+
+	// Test clearing filter
+	m.bufferFilterInput.SetValue("")
+	m.applyBufferFuzzyFilter()
+	if len(m.filteredBuffers) != 2 {
+		t.Errorf("Expected 2 buffers after clearing filter, got %d", len(m.filteredBuffers))
+	}
+
+	// Test closing buffer dialog
+	m.closeBufferDialog()
+	if m.showBufferDialog {
+		t.Error("Expected showBufferDialog to be false after closing")
+	}
+
+	// Test with no buffers
+	m2 := initialModel("")
+	m2.openBufferDialog()
+	if m2.showBufferDialog {
+		t.Error("Expected showBufferDialog to remain false when no buffers")
 	}
 }
