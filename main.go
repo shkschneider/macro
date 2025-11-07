@@ -3,12 +3,17 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/filepicker"
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/sahilm/fuzzy"
 )
 
 var (
@@ -22,21 +27,48 @@ var (
 	successStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
 	warningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
 
-	defaultMessage = "Ctrl-S: Save | Ctrl-Q: Quit"
+	// Dialog styles
+	dialogBoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("63")).
+			Padding(1, 2).
+			Background(lipgloss.Color("235"))
+	dialogTitleStyle = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("230")).
+				Padding(0, 1)
+
+	defaultMessage = "Ctrl-S: Save | Ctrl-Space: Files | Ctrl-Q: Quit"
 	termWidth      = 0 // Will be updated on WindowSizeMsg
 	termHeight     = 0 // Will be updated on WindowSizeMsg
 )
 
+// fileItem implements list.Item interface for the file dialog
+type fileItem struct {
+	name string
+	path string
+}
+
+func (i fileItem) FilterValue() string { return i.name }
+func (i fileItem) Title() string       { return i.name }
+func (i fileItem) Description() string { return "" }
+
 type model struct {
-	textarea   textarea.Model
-	viewport   viewport.Model
-	filepicker filepicker.Model
-	filePath   string
-	message    string // Message line for errors/warnings/info
-	err        error
-	showPicker bool
-	readOnly   bool
-	isWarning  bool
+	textarea    textarea.Model
+	viewport    viewport.Model
+	filepicker  filepicker.Model
+	fileList    list.Model
+	filterInput textinput.Model
+	allFiles    []fileItem      // All files in directory
+	filteredFiles []fileItem    // Filtered files based on input
+	selectedIdx int             // Selected file index in filtered list
+	filePath    string
+	message     string // Message line for errors/warnings/info
+	err         error
+	showPicker  bool
+	showDialog  bool
+	readOnly    bool
+	isWarning   bool
 }
 
 func initialModel(filePath string) model {
@@ -51,16 +83,36 @@ func initialModel(filePath string) model {
 
 	vp := viewport.New(80, 24)
 
+	// Initialize list for file dialog (filtering disabled, we handle it ourselves)
+	delegate := list.NewDefaultDelegate()
+	fileList := list.New([]list.Item{}, delegate, 0, 0)
+	fileList.Title = "File Switcher"
+	fileList.SetShowStatusBar(false)
+	fileList.SetFilteringEnabled(false) // Disable built-in filtering
+	fileList.Styles.Title = dialogTitleStyle
+
+	// Initialize text input for fuzzy filtering
+	ti := textinput.New()
+	ti.Placeholder = "Type to filter files..."
+	ti.CharLimit = 100
+	ti.Width = 50
+
 	m := model{
-		textarea:   ta,
-		viewport:   vp,
-		filepicker: fp,
-		filePath:   filePath,
-		message:    defaultMessage,
-		err:        nil,
-		showPicker: false,
-		readOnly:   false,
-		isWarning:  false,
+		textarea:      ta,
+		viewport:      vp,
+		filepicker:    fp,
+		fileList:      fileList,
+		filterInput:   ti,
+		allFiles:      []fileItem{},
+		filteredFiles: []fileItem{},
+		selectedIdx:   0,
+		filePath:      filePath,
+		message:       defaultMessage,
+		err:           nil,
+		showPicker:    false,
+		showDialog:    false,
+		readOnly:      false,
+		isWarning:     false,
 	}
 
 	if filePath != "" {
@@ -107,6 +159,85 @@ func (m *model) moveCursorToTop() {
 	for m.textarea.Line() > 0 {
 		m.textarea.CursorUp()
 	}
+}
+
+// getFilesInDirectory returns a list of files in the directory of the current file
+func (m *model) getFilesInDirectory() []fileItem {
+	if m.filePath == "" {
+		return []fileItem{}
+	}
+
+	dir := filepath.Dir(m.filePath)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return []fileItem{}
+	}
+
+	var items []fileItem
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			fullPath := filepath.Join(dir, entry.Name())
+			items = append(items, fileItem{
+				name: entry.Name(),
+				path: fullPath,
+			})
+		}
+	}
+	return items
+}
+
+// applyFuzzyFilter filters files based on the input text
+func (m *model) applyFuzzyFilter() {
+	query := m.filterInput.Value()
+	
+	if query == "" {
+		// No filter, show all files
+		m.filteredFiles = m.allFiles
+		m.selectedIdx = 0
+		return
+	}
+
+	// Build list of file names for fuzzy matching
+	var targets []string
+	for _, file := range m.allFiles {
+		targets = append(targets, file.name)
+	}
+
+	// Perform fuzzy search
+	matches := fuzzy.Find(query, targets)
+	
+	// Build filtered list based on matches
+	m.filteredFiles = []fileItem{}
+	for _, match := range matches {
+		m.filteredFiles = append(m.filteredFiles, m.allFiles[match.Index])
+	}
+
+	// Reset selection to first item
+	m.selectedIdx = 0
+}
+
+// openFileDialog opens the file switcher dialog
+func (m *model) openFileDialog() {
+	items := m.getFilesInDirectory()
+	if len(items) == 0 {
+		m.message = "No files found in current directory"
+		m.isWarning = true
+		return
+	}
+	m.allFiles = items
+	m.filteredFiles = items
+	m.selectedIdx = 0
+	m.filterInput.SetValue("")
+	m.filterInput.Focus()
+	m.showDialog = true
+}
+
+// closeFileDialog closes the file switcher dialog
+func (m *model) closeFileDialog() {
+	m.showDialog = false
+	m.filterInput.Blur()
+	m.message = defaultMessage
+	m.isWarning = false
 }
 
 func (m model) Init() tea.Cmd {
@@ -180,6 +311,88 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
+	// If showing dialog, handle dialog messages
+	if m.showDialog {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.String() {
+			case "ctrl+q":
+				return m, tea.Quit
+			case "esc", "ctrl+space", "ctrl+c":
+				// Close dialog
+				m.closeFileDialog()
+				return m, nil
+			case "enter":
+				// Select file from filtered list
+				if m.selectedIdx >= 0 && m.selectedIdx < len(m.filteredFiles) {
+					item := m.filteredFiles[m.selectedIdx]
+					// Load the selected file
+					content, err := os.ReadFile(item.path)
+					if err == nil {
+						m.filePath = item.path
+						
+						// Check if file is read-only
+						info, statErr := os.Stat(item.path)
+						if statErr == nil && info.Mode()&0200 == 0 {
+							m.readOnly = true
+							m.isWarning = true
+							m.message = "WARNING: File is read-only. Editing disabled. | Ctrl-Q: Quit"
+							m.viewport.SetContent(string(content))
+							m.viewport.GotoTop()
+						} else {
+							m.readOnly = false
+							m.isWarning = false
+							m.textarea.SetValue(string(content))
+							m.moveCursorToTop()
+							m.message = fmt.Sprintf("Opened %s", item.name)
+						}
+						m.err = nil
+					} else {
+						m.message = fmt.Sprintf("Error loading file: %v", err)
+						m.err = err
+					}
+					m.closeFileDialog()
+					return m, nil
+				}
+			case "up", "ctrl+k":
+				// Move selection up
+				if m.selectedIdx > 0 {
+					m.selectedIdx--
+				}
+				return m, nil
+			case "down", "ctrl+j":
+				// Move selection down
+				if m.selectedIdx < len(m.filteredFiles)-1 {
+					m.selectedIdx++
+				}
+				return m, nil
+			}
+		case tea.WindowSizeMsg:
+			// Update dialog size - fixed to 50% width and height
+			dialogWidth := msg.Width / 2
+			dialogHeight := msg.Height / 2
+			if dialogWidth < 40 {
+				dialogWidth = 40
+			}
+			if dialogHeight < 10 {
+				dialogHeight = 10
+			}
+			m.filterInput.Width = dialogWidth - 4 // Account for padding
+			termWidth = msg.Width
+			termHeight = msg.Height
+			return m, nil
+		}
+
+		// Update the text input
+		var cmd tea.Cmd
+		m.filterInput, cmd = m.filterInput.Update(msg)
+		
+		// Apply fuzzy filter after input changes
+		m.applyFuzzyFilter()
+		
+		return m, cmd
+	}
+
 	// Normal editor mode
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -205,6 +418,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.err = nil
 				}
 			}
+			return m, nil
+		}
+		// Check for Ctrl-Space using string matching
+		if msg.String() == "ctrl+ " {
+			m.openFileDialog()
 			return m, nil
 		}
 	case tea.WindowSizeMsg:
@@ -281,12 +499,189 @@ func (m model) View() string {
 		messageLine = messageStyle.Render(m.message)
 	}
 
-	return fmt.Sprintf(
+	baseView := fmt.Sprintf(
 		"%s\n%s\n%s",
 		contentView,
 		statusBar,
 		messageLine,
 	)
+
+	// If showing dialog, overlay it on top of the base view
+	if m.showDialog {
+		dialog := m.renderDialog()
+		return m.overlayDialog(baseView, dialog)
+	}
+
+	return baseView
+}
+
+// renderDialog renders the file dialog with its border and title
+func (m model) renderDialog() string {
+	// Calculate dialog dimensions
+	dialogWidth := termWidth / 2
+	dialogHeight := termHeight / 2
+	if dialogWidth < 40 {
+		dialogWidth = 40
+	}
+	if dialogHeight < 10 {
+		dialogHeight = 10
+	}
+
+	// Build file list view
+	var fileListView strings.Builder
+	listHeight := dialogHeight - 6 // Reserve space for title, input, and padding
+	
+	startIdx := 0
+	endIdx := len(m.filteredFiles)
+	
+	// Calculate visible range (scroll if needed)
+	if endIdx > listHeight {
+		// Ensure selected item is visible
+		if m.selectedIdx >= listHeight {
+			startIdx = m.selectedIdx - listHeight + 1
+		}
+		endIdx = startIdx + listHeight
+		if endIdx > len(m.filteredFiles) {
+			endIdx = len(m.filteredFiles)
+		}
+	}
+
+	// Render visible files
+	for i := startIdx; i < endIdx; i++ {
+		file := m.filteredFiles[i]
+		line := ""
+		if i == m.selectedIdx {
+			// Selected item
+			line = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("0")).
+				Background(lipgloss.Color("63")).
+				Width(dialogWidth - 4).
+				Render("> " + file.name)
+		} else {
+			// Normal item
+			line = lipgloss.NewStyle().
+				Width(dialogWidth - 4).
+				Render("  " + file.name)
+		}
+		fileListView.WriteString(line + "\n")
+	}
+	
+	// Pad the list if needed
+	linesRendered := endIdx - startIdx
+	for i := linesRendered; i < listHeight; i++ {
+		fileListView.WriteString(strings.Repeat(" ", dialogWidth-4) + "\n")
+	}
+
+	// Build the complete dialog content
+	title := dialogTitleStyle.Render("File Switcher")
+	fileCount := fmt.Sprintf("(%d/%d files)", len(m.filteredFiles), len(m.allFiles))
+	titleLine := lipgloss.NewStyle().
+		Width(dialogWidth - 4).
+		Render(title + " " + lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render(fileCount))
+	
+	separator := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("241")).
+		Render(strings.Repeat("─", dialogWidth-4))
+	
+	inputLabel := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("241")).
+		Render("Filter: ")
+	
+	inputView := inputLabel + m.filterInput.View()
+	
+	instructions := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("241")).
+		Render("↑/↓: Navigate | Enter: Open | Esc: Close")
+
+	fullContent := fmt.Sprintf("%s\n%s\n%s\n%s\n%s",
+		titleLine,
+		separator,
+		strings.TrimRight(fileListView.String(), "\n"),
+		inputView,
+		instructions,
+	)
+	
+	return dialogBoxStyle.Render(fullContent)
+}
+
+// overlayDialog overlays the dialog centered on top of the base view
+func (m model) overlayDialog(baseView, dialog string) string {
+	if termWidth == 0 || termHeight == 0 {
+		return baseView
+	}
+
+	// Split both into lines
+	baseLines := strings.Split(baseView, "\n")
+	dialogLines := strings.Split(dialog, "\n")
+
+	// Calculate dialog dimensions
+	dialogHeight := len(dialogLines)
+	dialogWidth := 0
+	for _, line := range dialogLines {
+		// Strip ANSI codes for accurate width calculation
+		width := lipgloss.Width(line)
+		if width > dialogWidth {
+			dialogWidth = width
+		}
+	}
+
+	// Calculate centering position
+	startY := (termHeight - dialogHeight) / 2
+	if startY < 0 {
+		startY = 0
+	}
+	startX := (termWidth - dialogWidth) / 2
+	if startX < 0 {
+		startX = 0
+	}
+
+	// Ensure we have enough base lines
+	for len(baseLines) < termHeight {
+		baseLines = append(baseLines, "")
+	}
+
+	// Overlay dialog lines onto base lines
+	for i, dialogLine := range dialogLines {
+		y := startY + i
+		if y >= 0 && y < len(baseLines) {
+			baseLine := baseLines[y]
+			baseWidth := lipgloss.Width(baseLine)
+			
+			// Pad base line to terminal width if needed
+			if baseWidth < termWidth {
+				baseLine += strings.Repeat(" ", termWidth-baseWidth)
+			}
+			
+			// Calculate where to place dialog line
+			dialogLineWidth := lipgloss.Width(dialogLine)
+			
+			// Build the new line with dialog overlaid
+			var newLine strings.Builder
+			
+			// Add left part of base (before dialog)
+			if startX > 0 {
+				leftPart := baseLine
+				if len(leftPart) > startX {
+					leftPart = leftPart[:startX]
+				}
+				newLine.WriteString(leftPart)
+			}
+			
+			// Add dialog content
+			newLine.WriteString(dialogLine)
+			
+			// Add right part of base (after dialog)
+			endX := startX + dialogLineWidth
+			if endX < baseWidth {
+				rightPart := baseLine[endX:]
+				newLine.WriteString(rightPart)
+			}
+			
+			baseLines[y] = newLine.String()
+		}
+	}
+
+	return strings.Join(baseLines, "\n")
 }
 
 func main() {
