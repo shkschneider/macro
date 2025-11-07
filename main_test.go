@@ -116,59 +116,48 @@ func TestFileDialog(t *testing.T) {
 		}
 	}
 
-	// Open one of the files
-	testFile := tmpDir + "/file1.txt"
-	m := initialModel(testFile)
-	if m.err != nil {
-		t.Errorf("Expected no error, got %v", m.err)
+	// Test NewFileDialog
+	dialog := NewFileDialog(tmpDir)
+	if dialog == nil {
+		t.Fatal("Expected NewFileDialog to return a dialog")
 	}
-
-	// Test getFilesInDirectory
-	files := m.getFilesInDirectory()
-	if len(files) != 3 {
-		t.Errorf("Expected 3 files, got %d", len(files))
+	if !dialog.IsVisible() {
+		t.Error("Expected dialog to be visible initially")
 	}
-
-	// Test opening dialog
-	m.openFileDialog()
-	if !m.showDialog {
-		t.Error("Expected showDialog to be true after openFileDialog")
+	if len(dialog.allFiles) != 3 {
+		t.Errorf("Expected 3 files, got %d", len(dialog.allFiles))
 	}
-	if len(m.allFiles) != 3 {
-		t.Errorf("Expected 3 files in allFiles, got %d", len(m.allFiles))
-	}
-	if len(m.filteredFiles) != 3 {
-		t.Errorf("Expected 3 files in filteredFiles initially, got %d", len(m.filteredFiles))
+	if len(dialog.filteredFiles) != 3 {
+		t.Errorf("Expected 3 filtered files initially, got %d", len(dialog.filteredFiles))
 	}
 
 	// Test fuzzy filtering
-	m.filterInput.SetValue("go")
-	m.applyFuzzyFilter()
-	if len(m.filteredFiles) != 1 {
-		t.Errorf("Expected 1 file matching 'go', got %d", len(m.filteredFiles))
+	dialog.filterInput.SetValue("go")
+	dialog.applyFuzzyFilter()
+	if len(dialog.filteredFiles) != 1 {
+		t.Errorf("Expected 1 file matching 'go', got %d", len(dialog.filteredFiles))
 	}
-	if len(m.filteredFiles) > 0 && m.filteredFiles[0].name != "file3.go" {
-		t.Errorf("Expected 'file3.go' to match, got %s", m.filteredFiles[0].name)
+	if len(dialog.filteredFiles) > 0 && dialog.filteredFiles[0].name != "file3.go" {
+		t.Errorf("Expected 'file3.go' to match, got %s", dialog.filteredFiles[0].name)
 	}
 
 	// Test clearing filter
-	m.filterInput.SetValue("")
-	m.applyFuzzyFilter()
-	if len(m.filteredFiles) != 3 {
-		t.Errorf("Expected 3 files after clearing filter, got %d", len(m.filteredFiles))
+	dialog.filterInput.SetValue("")
+	dialog.applyFuzzyFilter()
+	if len(dialog.filteredFiles) != 3 {
+		t.Errorf("Expected 3 files after clearing filter, got %d", len(dialog.filteredFiles))
 	}
 
-	// Test closing dialog
-	m.closeFileDialog()
-	if m.showDialog {
-		t.Error("Expected showDialog to be false after closeFileDialog")
+	// Test with empty directory
+	emptyDir, err := os.MkdirTemp("", "test_empty_*")
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	// Test with no file path
-	m2 := initialModel("")
-	files2 := m2.getFilesInDirectory()
-	if len(files2) != 0 {
-		t.Errorf("Expected 0 files when no file path, got %d", len(files2))
+	defer os.RemoveAll(emptyDir)
+	
+	dialog2 := NewFileDialog(emptyDir)
+	if len(dialog2.allFiles) != 0 {
+		t.Errorf("Expected 0 files in empty directory, got %d", len(dialog2.allFiles))
 	}
 }
 
@@ -256,77 +245,74 @@ func TestBufferDialog(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Initialize with first file
-	m := initialModel(file1Path)
-	
-	// Add second buffer
-	m.addBuffer(file2Path, "content2", false)
+	// Create buffers to pass to dialog
+	buffers := []Buffer{
+		{filePath: file1Path, content: "content1", readOnly: false},
+		{filePath: file2Path, content: "content2", readOnly: false},
+	}
 
-	// Test opening buffer dialog
-	m.openBufferDialog()
-	if !m.showBufferDialog {
-		t.Error("Expected showBufferDialog to be true")
+	// Test NewBufferDialog
+	dialog := NewBufferDialog(buffers, 0)
+	if dialog == nil {
+		t.Fatal("Expected NewBufferDialog to return a dialog")
 	}
-	if len(m.allBuffers) != 2 {
-		t.Errorf("Expected 2 buffers in allBuffers, got %d", len(m.allBuffers))
+	if !dialog.IsVisible() {
+		t.Error("Expected dialog to be visible initially")
 	}
-	if len(m.filteredBuffers) != 2 {
-		t.Errorf("Expected 2 buffers in filteredBuffers initially, got %d", len(m.filteredBuffers))
+	if len(dialog.allBuffers) != 2 {
+		t.Errorf("Expected 2 buffers in allBuffers, got %d", len(dialog.allBuffers))
+	}
+	if len(dialog.filteredBuffers) != 2 {
+		t.Errorf("Expected 2 buffers in filteredBuffers initially, got %d", len(dialog.filteredBuffers))
 	}
 
 	// Test buffer fuzzy filtering
-	m.bufferFilterInput.SetValue("file1")
-	m.applyBufferFuzzyFilter()
-	if len(m.filteredBuffers) != 1 {
-		t.Errorf("Expected 1 buffer matching 'file1', got %d", len(m.filteredBuffers))
+	dialog.filterInput.SetValue("file1")
+	dialog.applyFuzzyFilter()
+	if len(dialog.filteredBuffers) != 1 {
+		t.Errorf("Expected 1 buffer matching 'file1', got %d", len(dialog.filteredBuffers))
 	}
 
 	// Test clearing filter
-	m.bufferFilterInput.SetValue("")
-	m.applyBufferFuzzyFilter()
-	if len(m.filteredBuffers) != 2 {
-		t.Errorf("Expected 2 buffers after clearing filter, got %d", len(m.filteredBuffers))
-	}
-
-	// Test closing buffer dialog
-	m.closeBufferDialog()
-	if m.showBufferDialog {
-		t.Error("Expected showBufferDialog to be false after closing")
+	dialog.filterInput.SetValue("")
+	dialog.applyFuzzyFilter()
+	if len(dialog.filteredBuffers) != 2 {
+		t.Errorf("Expected 2 buffers after clearing filter, got %d", len(dialog.filteredBuffers))
 	}
 
 	// Test with no buffers
-	m2 := initialModel("")
-	m2.openBufferDialog()
-	if m2.showBufferDialog {
-		t.Error("Expected showBufferDialog to remain false when no buffers")
+	dialog2 := NewBufferDialog([]Buffer{}, -1)
+	if len(dialog2.allBuffers) != 0 {
+		t.Errorf("Expected 0 buffers, got %d", len(dialog2.allBuffers))
 	}
 }
 
 func TestHelpDialog(t *testing.T) {
-	m := initialModel("")
-
-	// Test opening help dialog
-	m.openHelpDialog()
-	if !m.showHelpDialog {
-		t.Error("Expected showHelpDialog to be true")
+	// Test NewHelpDialog
+	dialog := NewHelpDialog()
+	if dialog == nil {
+		t.Fatal("Expected NewHelpDialog to return a dialog")
 	}
-	if len(m.allCommands) == 0 {
+	if !dialog.IsVisible() {
+		t.Error("Expected dialog to be visible initially")
+	}
+	if len(dialog.allCommands) == 0 {
 		t.Error("Expected commands to be populated")
 	}
-	if len(m.filteredCommands) == 0 {
+	if len(dialog.filteredCommands) == 0 {
 		t.Error("Expected filtered commands to be populated initially")
 	}
 
 	// Test help fuzzy filtering
-	m.helpFilterInput.SetValue("file")
-	m.applyHelpFuzzyFilter()
-	if len(m.filteredCommands) == 0 {
+	dialog.filterInput.SetValue("file")
+	dialog.applyFuzzyFilter()
+	if len(dialog.filteredCommands) == 0 {
 		t.Error("Expected at least one command matching 'file'")
 	}
 	
 	// Verify file-related commands are in results
 	foundFileCommand := false
-	for _, cmd := range m.filteredCommands {
+	for _, cmd := range dialog.filteredCommands {
 		if strings.Contains(cmd.command.name, "file") {
 			foundFileCommand = true
 			break
@@ -337,16 +323,10 @@ func TestHelpDialog(t *testing.T) {
 	}
 
 	// Test clearing filter
-	m.helpFilterInput.SetValue("")
-	m.applyHelpFuzzyFilter()
-	if len(m.filteredCommands) != len(m.allCommands) {
-		t.Errorf("Expected %d commands after clearing filter, got %d", len(m.allCommands), len(m.filteredCommands))
-	}
-
-	// Test closing help dialog
-	m.closeHelpDialog()
-	if m.showHelpDialog {
-		t.Error("Expected showHelpDialog to be false after closing")
+	dialog.filterInput.SetValue("")
+	dialog.applyFuzzyFilter()
+	if len(dialog.filteredCommands) != len(dialog.allCommands) {
+		t.Errorf("Expected %d commands after clearing filter, got %d", len(dialog.allCommands), len(dialog.filteredCommands))
 	}
 }
 
@@ -377,8 +357,6 @@ func TestCommandSystem(t *testing.T) {
 		if cmd.description == "" {
 			t.Error("Command has empty description")
 		}
-		if cmd.execute == nil {
-			t.Errorf("Command %s has nil execute function", cmd.name)
-		}
+		// Note: execute can be nil for commands handled directly in Update
 	}
 }

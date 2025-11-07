@@ -30,28 +30,19 @@ func getKeybindings() []Command {
 			name:        "file-open",
 			key:         "Ctrl-Space",
 			description: "Open file switcher dialog",
-			execute: func(m *model) tea.Cmd {
-				m.openFileDialog()
-				return nil
-			},
+			execute:     nil, // Handled directly in Update
 		},
 		{
 			name:        "buffer-switch",
 			key:         "Ctrl-B",
 			description: "Open buffer switcher dialog",
-			execute: func(m *model) tea.Cmd {
-				m.openBufferDialog()
-				return nil
-			},
+			execute:     nil, // Handled directly in Update
 		},
 		{
 			name:        "help-show",
 			key:         "Ctrl-H",
 			description: "Show this help dialog",
-			execute: func(m *model) tea.Cmd {
-				m.openHelpDialog()
-				return nil
-			},
+			execute:     nil, // Handled directly in Update
 		},
 		{
 			name:        "quit",
@@ -59,41 +50,6 @@ func getKeybindings() []Command {
 			description: "Quit the editor",
 			execute: func(m *model) tea.Cmd {
 				return tea.Quit
-			},
-		},
-		{
-			name:        "dialog-close",
-			key:         "Esc",
-			description: "Close open dialog",
-			execute: func(m *model) tea.Cmd {
-				m.closeCurrentDialog()
-				return nil
-			},
-		},
-		{
-			name:        "dialog-navigate-up",
-			key:         "↑ / Ctrl-K",
-			description: "Navigate up in dialog list",
-			execute: func(m *model) tea.Cmd {
-				m.navigateDialogUp()
-				return nil
-			},
-		},
-		{
-			name:        "dialog-navigate-down",
-			key:         "↓ / Ctrl-J",
-			description: "Navigate down in dialog list",
-			execute: func(m *model) tea.Cmd {
-				m.navigateDialogDown()
-				return nil
-			},
-		},
-		{
-			name:        "dialog-select",
-			key:         "Enter",
-			description: "Select item in dialog",
-			execute: func(m *model) tea.Cmd {
-				return m.executeDialogSelect()
 			},
 		},
 	}
