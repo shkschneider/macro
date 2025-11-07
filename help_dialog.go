@@ -10,6 +10,11 @@ import (
 	"github.com/sahilm/fuzzy"
 )
 
+// commandItem is used internally by HelpDialog
+type commandItem struct {
+	command Command
+}
+
 // HelpDialog implements the Dialog interface for help/command selection
 type HelpDialog struct {
 	filterInput      textinput.Model

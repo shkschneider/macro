@@ -12,6 +12,12 @@ import (
 	"github.com/sahilm/fuzzy"
 )
 
+// fileItem is used internally by FileDialog
+type fileItem struct {
+	name string
+	path string
+}
+
 // FileDialog implements the Dialog interface for file selection
 type FileDialog struct {
 	filterInput   textinput.Model

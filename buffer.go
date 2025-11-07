@@ -1,41 +1,10 @@
 package main
 
-import (
-	"os"
-	"path/filepath"
-)
-
 // Buffer represents an open file with its state
 type Buffer struct {
 	filePath string
 	content  string
 	readOnly bool
-}
-
-// getFilesInDirectory returns a list of files in the directory of the current file
-func (m *model) getFilesInDirectory() []fileItem {
-	filePath := m.getCurrentFilePath()
-	if filePath == "" {
-		return []fileItem{}
-	}
-
-	dir := filepath.Dir(filePath)
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return []fileItem{}
-	}
-
-	var items []fileItem
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			fullPath := filepath.Join(dir, entry.Name())
-			items = append(items, fileItem{
-				name: entry.Name(),
-				path: fullPath,
-			})
-		}
-	}
-	return items
 }
 
 // moveCursorToTop moves the textarea cursor to position (0,0)

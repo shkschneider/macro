@@ -11,6 +11,12 @@ import (
 	"github.com/sahilm/fuzzy"
 )
 
+// bufferItem is used internally by BufferDialog
+type bufferItem struct {
+	name  string
+	index int
+}
+
 // BufferDialog implements the Dialog interface for buffer selection
 type BufferDialog struct {
 	filterInput     textinput.Model
