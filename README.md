@@ -7,7 +7,12 @@ A nano-like simple CLI text editor built with [Bubbletea](https://github.com/cha
 - Simple terminal-based text editor with Elm-inspired architecture
 - Keyboard shortcuts similar to nano:
   - **Ctrl-S**: Save file
+  - **Ctrl-Space**: Open file switcher dialog (fuzzy find files in current directory)
   - **Ctrl-Q**: Quit editor
+- File switcher dialog with centered overlay
+  - Lists all files in the current file's directory
+  - Use arrow keys to navigate, `/` to filter, Enter to open
+  - Esc or Ctrl-Space to close
 - Clean, modern UI with syntax highlighting for status messages
 
 ## Installation

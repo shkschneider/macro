@@ -96,3 +96,54 @@ func TestCursorPositionAtTop(t *testing.T) {
 		t.Errorf("Expected viewport YOffset at 0, got %d", m.viewport.YOffset)
 	}
 }
+
+func TestFileDialog(t *testing.T) {
+	// Create a temporary directory with test files
+	tmpDir, err := os.MkdirTemp("", "test_dialog_*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create test files in the directory
+	testFiles := []string{"file1.txt", "file2.txt", "file3.go"}
+	for _, name := range testFiles {
+		filePath := tmpDir + "/" + name
+		err := os.WriteFile(filePath, []byte("test content"), 0644)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Open one of the files
+	testFile := tmpDir + "/file1.txt"
+	m := initialModel(testFile)
+	if m.err != nil {
+		t.Errorf("Expected no error, got %v", m.err)
+	}
+
+	// Test getFilesInDirectory
+	files := m.getFilesInDirectory()
+	if len(files) != 3 {
+		t.Errorf("Expected 3 files, got %d", len(files))
+	}
+
+	// Test opening dialog
+	m.openFileDialog()
+	if !m.showDialog {
+		t.Error("Expected showDialog to be true after openFileDialog")
+	}
+
+	// Test closing dialog
+	m.closeFileDialog()
+	if m.showDialog {
+		t.Error("Expected showDialog to be false after closeFileDialog")
+	}
+
+	// Test with no file path
+	m2 := initialModel("")
+	files2 := m2.getFilesInDirectory()
+	if len(files2) != 0 {
+		t.Errorf("Expected 0 files when no file path, got %d", len(files2))
+	}
+}
