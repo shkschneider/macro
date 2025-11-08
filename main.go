@@ -16,49 +16,49 @@ import (
 )
 
 var (
-statusBarStyle = lipgloss.NewStyle().
-Background(lipgloss.Color("15")). // White background
-Foreground(lipgloss.Color("0")).  // Black foreground
-Bold(true).
-Padding(0, 1) // Add horizontal padding
-messageStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
-errorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
-successStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
-warningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
+	statusBarStyle = lipgloss.NewStyle().
+			Background(lipgloss.Color("15")). // White background
+			Foreground(lipgloss.Color("0")).  // Black foreground
+			Bold(true).
+			Padding(0, 1) // Add horizontal padding
+	messageStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
+	errorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+	successStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
+	warningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
 
-// Dialog styles
-dialogBoxStyle = lipgloss.NewStyle().
-Border(lipgloss.RoundedBorder()).
-BorderForeground(lipgloss.Color("63")).
-Padding(1, 2).
-Background(lipgloss.Color("235"))
-dialogTitleStyle = lipgloss.NewStyle().
-Bold(true).
-Foreground(lipgloss.Color("230")).
-Padding(0, 1)
+	// Dialog styles
+	dialogBoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("63")).
+			Padding(1, 2).
+			Background(lipgloss.Color("235"))
+	dialogTitleStyle = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("230")).
+				Padding(0, 1)
 
-defaultMessage = "Macro v0.7.0 | Hit Ctrl-H for Help."
-termWidth      = 0 // Will be updated on WindowSizeMsg
-termHeight     = 0 // Will be updated on WindowSizeMsg
+	defaultMessage = "Macro v0.7.0 | Hit Ctrl-H for Help."
+	termWidth      = 0 // Will be updated on WindowSizeMsg
+	termHeight     = 0 // Will be updated on WindowSizeMsg
 )
 
 type model struct {
-	textarea     textarea.Model
-	viewport     viewport.Model
-	filepicker   filepicker.Model
-	buffers      []Buffer // All open buffers
+	textarea      textarea.Model
+	viewport      viewport.Model
+	filepicker    filepicker.Model
+	buffers       []Buffer // All open buffers
 	currentBuffer int      // Index of current buffer
-	message      string   // Message line for errors/warnings/info
-	err          error
-	showPicker   bool
-	activeDialog core.Dialog // Single active dialog (nil when closed)
+	message       string   // Message line for errors/warnings/info
+	err           error
+	showPicker    bool
+	activeDialog  core.Dialog // Single active dialog (nil when closed)
 }
 
 func initialModel(filePath string) model {
 	ta := textarea.New()
 	ta.Focus()
-	ta.Prompt = ""              // Remove default border on the left
-	ta.ShowLineNumbers = true   // Enable line numbers for better navigation
+	ta.Prompt = ""            // Remove default border on the left
+	ta.ShowLineNumbers = true // Enable line numbers for better navigation
 
 	fp := filepicker.New()
 	fp.DirAllowed = false
@@ -96,32 +96,32 @@ func initialModel(filePath string) model {
 				// Handle file read errors
 				m.message = fmt.Sprintf("Error: Cannot read file: %v | Ctrl-Q: Quit", err)
 				m.err = err
-return m
-}
-// Check if file is read-only
-readOnly := info.Mode()&0200 == 0
+				return m
+			}
+			// Check if file is read-only
+			readOnly := info.Mode()&0200 == 0
 
-// Create initial buffer
-buf := Buffer{
-filePath: filePath,
-content:  string(content),
-readOnly: readOnly,
-}
-m.buffers = append(m.buffers, buf)
-m.currentBuffer = 0
+			// Create initial buffer
+			buf := Buffer{
+				filePath: filePath,
+				content:  string(content),
+				readOnly: readOnly,
+			}
+			m.buffers = append(m.buffers, buf)
+			m.currentBuffer = 0
 
-// Load buffer into UI
-m.loadBuffer(0)
-}
-}
-return m
+			// Load buffer into UI
+			m.loadBuffer(0)
+		}
+	}
+	return m
 }
 
 func (m model) Init() tea.Cmd {
-if m.showPicker {
-return m.filepicker.Init()
-}
-return textarea.Blink
+	if m.showPicker {
+		return m.filepicker.Init()
+	}
+	return textarea.Blink
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

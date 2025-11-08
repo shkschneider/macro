@@ -70,7 +70,7 @@ func TestCursorPositionAtTop(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(tmpFile.Name())
-	
+
 	// Write multi-line content
 	content := "Line 1\nLine 2\nLine 3\nLine 4\nLine 5"
 	tmpFile.WriteString(content)
@@ -80,7 +80,7 @@ func TestCursorPositionAtTop(t *testing.T) {
 	if m.err != nil {
 		t.Errorf("Expected no error for text file, got %v", m.err)
 	}
-	
+
 	// Check cursor is at line 0 (top)
 	if m.textarea.Line() != 0 {
 		t.Errorf("Expected cursor at line 0, got line %d", m.textarea.Line())
@@ -92,7 +92,7 @@ func TestCursorPositionAtTop(t *testing.T) {
 	if m.err != nil {
 		t.Errorf("Expected no error for read-only file, got %v", m.err)
 	}
-	
+
 	// Check viewport is at top (YOffset should be 0)
 	if m.viewport.YOffset != 0 {
 		t.Errorf("Expected viewport YOffset at 0, got %d", m.viewport.YOffset)
@@ -132,7 +132,7 @@ func TestFileDialog(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(emptyDir)
-	
+
 	dialog2 := feature.NewFileDialog(emptyDir)
 	if dialog2 == nil {
 		t.Fatal("Expected feature.NewFileDialog to return a dialog even for empty directory")
@@ -149,7 +149,7 @@ func TestBufferManagement(t *testing.T) {
 
 	file1Path := tmpDir + "/file1.txt"
 	file2Path := tmpDir + "/file2.txt"
-	
+
 	err = os.WriteFile(file1Path, []byte("content1"), 0644)
 	if err != nil {
 		t.Fatal(err)
@@ -213,7 +213,7 @@ func TestBufferDialog(t *testing.T) {
 
 	file1Path := tmpDir + "/file1.txt"
 	file2Path := tmpDir + "/file2.txt"
-	
+
 	err = os.WriteFile(file1Path, []byte("content1"), 0644)
 	if err != nil {
 		t.Fatal(err)

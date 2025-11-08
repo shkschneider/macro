@@ -20,9 +20,9 @@ func (m *model) loadBuffer(idx int) {
 	if idx < 0 || idx >= len(m.buffers) {
 		return
 	}
-	
+
 	buf := m.buffers[idx]
-	
+
 	if buf.readOnly {
 		m.viewport.SetContent(buf.content)
 		m.viewport.GotoTop()
@@ -40,7 +40,7 @@ func (m *model) saveCurrentBufferState() {
 	if m.currentBuffer < 0 || m.currentBuffer >= len(m.buffers) {
 		return
 	}
-	
+
 	buf := &m.buffers[m.currentBuffer]
 	if !buf.readOnly {
 		buf.content = m.textarea.Value()
@@ -55,7 +55,7 @@ func (m *model) addBuffer(filePath string, content string, readOnly bool) int {
 			return i // Return existing buffer index
 		}
 	}
-	
+
 	// Create new buffer
 	buf := Buffer{
 		filePath: filePath,
