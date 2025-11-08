@@ -205,13 +205,11 @@ func (d *FileDialog) View(termWidth, termHeight int) string {
 		file := d.filteredFiles[i]
 		line := ""
 		if i == d.selectedIdx {
-			line = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("0")).
-				Background(lipgloss.Color("63")).
+			line = macro.DialogHighlightedStyle.
 				Width(dialogWidth - 4).
 				Render("> " + file.name)
 		} else {
-			line = lipgloss.NewStyle().
+			line = macro.DialogItemStyle.
 				Width(dialogWidth - 4).
 				Render("  " + file.name)
 		}
@@ -223,24 +221,21 @@ func (d *FileDialog) View(termWidth, termHeight int) string {
 		fileListView.WriteString(strings.Repeat(" ", dialogWidth-4) + "\n")
 	}
 
-	title := dialogTitleStyle.Render("File Switcher")
+	title := macro.DialogTitleStyle.Render("File Switcher")
 	fileCount := fmt.Sprintf("(%d/%d files)", len(d.filteredFiles), len(d.allFiles))
 	titleLine := lipgloss.NewStyle().
 		Width(dialogWidth - 4).
-		Render(title + " " + lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render(fileCount))
+		Render(title + " " + macro.DialogCountStyle.Render(fileCount))
 
-	separator := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241")).
+	separator := macro.DialogSeparatorStyle.
 		Render(strings.Repeat("─", dialogWidth-4))
 
-	inputLabel := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241")).
+	inputLabel := macro.DialogInputLabelStyle.
 		Render("Filter: ")
 
 	inputView := inputLabel + d.filterInput.View()
 
-	instructions := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241")).
+	instructions := macro.DialogInstructionsStyle.
 		Render("↑/↓: Navigate | Enter: Open | Esc: Close")
 
 	fullContent := fmt.Sprintf("%s\n%s\n%s\n%s\n%s",
@@ -251,7 +246,7 @@ func (d *FileDialog) View(termWidth, termHeight int) string {
 		instructions,
 	)
 
-	return dialogBoxStyle.Render(fullContent)
+	return macro.DialogBoxStyle.Render(fullContent)
 }
 
 func (d *FileDialog) IsVisible() bool {

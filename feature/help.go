@@ -194,13 +194,11 @@ func (d *HelpDialog) View(termWidth, termHeight int) string {
 		cmdText := fmt.Sprintf("%-20s %-12s %s", cmd.command.Name, cmd.command.Key, cmd.command.Description)
 		line := ""
 		if i == d.selectedIdx {
-			line = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("0")).
-				Background(lipgloss.Color("63")).
+			line = macro.DialogHighlightedStyle.
 				Width(dialogWidth - 4).
 				Render("> " + cmdText)
 		} else {
-			line = lipgloss.NewStyle().
+			line = macro.DialogItemStyle.
 				Width(dialogWidth - 4).
 				Render("  " + cmdText)
 		}
@@ -212,24 +210,21 @@ func (d *HelpDialog) View(termWidth, termHeight int) string {
 		helpListView.WriteString(strings.Repeat(" ", dialogWidth-4) + "\n")
 	}
 
-	title := dialogTitleStyle.Render("Help - Commands")
+	title := macro.DialogTitleStyle.Render("Help - Commands")
 	cmdCount := fmt.Sprintf("(%d/%d commands)", len(d.filteredCommands), len(d.allCommands))
 	titleLine := lipgloss.NewStyle().
 		Width(dialogWidth - 4).
-		Render(title + " " + lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render(cmdCount))
+		Render(title + " " + macro.DialogCountStyle.Render(cmdCount))
 
-	separator := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241")).
+	separator := macro.DialogSeparatorStyle.
 		Render(strings.Repeat("─", dialogWidth-4))
 
-	inputLabel := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241")).
+	inputLabel := macro.DialogInputLabelStyle.
 		Render("Filter: ")
 
 	inputView := inputLabel + d.filterInput.View()
 
-	instructions := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241")).
+	instructions := macro.DialogInstructionsStyle.
 		Render("↑/↓: Navigate | Enter: Run Command | Esc: Close")
 
 	fullContent := fmt.Sprintf("%s\n%s\n%s\n%s\n%s",
@@ -240,7 +235,7 @@ func (d *HelpDialog) View(termWidth, termHeight int) string {
 		instructions,
 	)
 
-	return dialogBoxStyle.Render(fullContent)
+	return macro.DialogBoxStyle.Render(fullContent)
 }
 
 func (d *HelpDialog) IsVisible() bool {

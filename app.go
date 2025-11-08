@@ -16,26 +16,14 @@ import (
 )
 
 var (
-	statusBarStyle = lipgloss.NewStyle().
-			Background(lipgloss.Color("15")). // White background
-			Foreground(lipgloss.Color("0")).  // Black foreground
-			Bold(true).
-			Padding(0, 1) // Add horizontal padding
-	messageStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
-	errorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
-	successStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
-	warningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
-
-	// Dialog styles
-	dialogBoxStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("63")).
-			Padding(1, 2).
-			Background(lipgloss.Color("235"))
-	dialogTitleStyle = lipgloss.NewStyle().
-				Bold(true).
-				Foreground(lipgloss.Color("230")).
-				Padding(0, 1)
+	// Use styles from core package
+	statusBarStyle   = core.StatusBarStyle
+	messageStyle     = core.MessageStyle
+	errorStyle       = core.ErrorStyle
+	successStyle     = core.SuccessStyle
+	warningStyle     = core.WarningStyle
+	dialogBoxStyle   = core.DialogBoxStyle
+	dialogTitleStyle = core.DialogTitleStyle
 
 	defaultMessage = "Macro v0.7.0 | Hit Ctrl-H for Help."
 	termWidth      = 0 // Will be updated on WindowSizeMsg
