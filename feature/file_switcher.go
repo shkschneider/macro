@@ -19,7 +19,7 @@ import (
 func FileSwitcherCommand() macro.CommandDef {
 	return macro.CommandDef{
 		Name:        "file-open",
-		Key:         "Ctrl-Space",
+		Key:         "Ctrl-P",
 		Description: "Open file switcher (lists files in current buffer's directory)",
 	}
 }

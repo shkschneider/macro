@@ -17,8 +17,8 @@ import (
 func HelpCommand() macro.CommandDef {
 	return macro.CommandDef{
 		Name:        "help-show",
-		Key:         "Ctrl-H",
-		Description: "Show this help dialog",
+		Key:         "Ctrl-Space",
+		Description: "Show command palette",
 	}
 }
 
