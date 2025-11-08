@@ -1,4 +1,4 @@
-package main
+package feature
 
 import (
 	"fmt"
@@ -14,13 +14,13 @@ import (
 
 // ====== Command Registration ======
 
-func init() {
-	registerCommand(Command{
-		name:        "file-open",
-		key:         "Ctrl-Space",
-		description: "Open file switcher dialog",
-		execute:     nil, // Handled directly in main Update loop
-	})
+// FileSwitcherCommand returns the command definition for file switching
+func FileSwitcherCommand() CommandDef {
+	return CommandDef{
+		Name:        "file-open",
+		Key:         "Ctrl-Space",
+		Description: "Open file switcher dialog",
+	}
 }
 
 // ====== Message Types ======

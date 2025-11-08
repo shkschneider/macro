@@ -1,4 +1,4 @@
-package main
+package feature
 
 import (
 	"fmt"
@@ -13,13 +13,13 @@ import (
 
 // ====== Command Registration ======
 
-func init() {
-	registerCommand(Command{
-		name:        "buffer-switch",
-		key:         "Ctrl-B",
-		description: "Open buffer switcher dialog",
-		execute:     nil, // Handled directly in main Update loop
-	})
+// BufferSwitcherCommand returns the command definition for buffer switching
+func BufferSwitcherCommand() CommandDef {
+	return CommandDef{
+		Name:        "buffer-switch",
+		Key:         "Ctrl-B",
+		Description: "Open buffer switcher dialog",
+	}
 }
 
 // ====== Message Types ======
@@ -49,7 +49,7 @@ type BufferDialog struct {
 }
 
 // NewBufferDialog creates a new buffer dialog
-func NewBufferDialog(buffers []Buffer, currentBuffer int) *BufferDialog {
+func NewBufferDialog(buffers []BufferInfo, currentBuffer int) *BufferDialog {
 	ti := textinput.New()
 	ti.Placeholder = "Type to filter buffers..."
 	ti.CharLimit = 100
@@ -59,8 +59,8 @@ func NewBufferDialog(buffers []Buffer, currentBuffer int) *BufferDialog {
 	// Build buffer list
 	var bufferItems []bufferItem
 	for i, buf := range buffers {
-		name := filepath.Base(buf.filePath)
-		if buf.readOnly {
+		name := filepath.Base(buf.FilePath)
+		if buf.ReadOnly {
 			name += " [RO]"
 		}
 		if i == currentBuffer {

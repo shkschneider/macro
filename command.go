@@ -4,10 +4,10 @@ import tea "github.com/charmbracelet/bubbletea"
 
 // Command represents an editor command with its keybinding and execution logic
 type Command struct {
-	name        string
-	key         string
-	description string
-	execute     func(*model) tea.Cmd
+	Name        string
+	Key         string
+	Description string
+	Execute     func(*model) tea.Cmd
 }
 
 var commandRegistry []Command
@@ -25,7 +25,7 @@ func getKeybindings() []Command {
 // getCommandByName returns a command by its name
 func getCommandByName(name string) *Command {
 	for i := range commandRegistry {
-		if commandRegistry[i].name == name {
+		if commandRegistry[i].Name == name {
 			return &commandRegistry[i]
 		}
 	}

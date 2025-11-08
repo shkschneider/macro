@@ -1,4 +1,4 @@
-package main
+package feature
 
 import (
 	"fmt"
@@ -12,13 +12,13 @@ import (
 
 // ====== Command Registration ======
 
-func init() {
-	registerCommand(Command{
-		name:        "help-show",
-		key:         "Ctrl-H",
-		description: "Show this help dialog",
-		execute:     nil, // Handled directly in main Update loop
-	})
+// HelpCommand returns the command definition for showing help
+func HelpCommand() CommandDef {
+	return CommandDef{
+		Name:        "help-show",
+		Key:         "Ctrl-H",
+		Description: "Show this help dialog",
+	}
 }
 
 // ====== Message Types ======
@@ -32,7 +32,7 @@ type CommandSelectedMsg struct {
 
 // commandItem is used internally by HelpDialog
 type commandItem struct {
-	command Command
+	command CommandDef
 }
 
 // ====== Dialog Implementation ======
@@ -47,7 +47,7 @@ type HelpDialog struct {
 }
 
 // NewHelpDialog creates a new help dialog
-func NewHelpDialog() *HelpDialog {
+func NewHelpDialog(commands []CommandDef) *HelpDialog {
 	ti := textinput.New()
 	ti.Placeholder = "Type to filter commands..."
 	ti.CharLimit = 100
@@ -56,7 +56,7 @@ func NewHelpDialog() *HelpDialog {
 
 	// Build command list
 	var commandItems []commandItem
-	for _, cmd := range getKeybindings() {
+	for _, cmd := range commands {
 		commandItems = append(commandItems, commandItem{
 			command: cmd,
 		})
@@ -87,7 +87,7 @@ func (d *HelpDialog) Update(msg tea.Msg) (Dialog, tea.Cmd) {
 				selectedCommand := d.filteredCommands[d.selectedIdx]
 				d.visible = false
 				return d, func() tea.Msg {
-					return CommandSelectedMsg{CommandName: selectedCommand.command.name}
+					return CommandSelectedMsg{CommandName: selectedCommand.command.Name}
 				}
 			}
 		case "up", "ctrl+k":
@@ -129,7 +129,7 @@ func (d *HelpDialog) applyFuzzyFilter() {
 	// Build list of command names and descriptions for fuzzy matching
 	var targets []string
 	for _, cmd := range d.allCommands {
-		targets = append(targets, cmd.command.name+" "+cmd.command.description)
+		targets = append(targets, cmd.command.Name+" "+cmd.command.Description)
 	}
 
 	// Perform fuzzy search
@@ -176,7 +176,7 @@ func (d *HelpDialog) View(termWidth, termHeight int) string {
 
 	for i := startIdx; i < endIdx; i++ {
 		cmd := d.filteredCommands[i]
-		cmdText := fmt.Sprintf("%-20s %-12s %s", cmd.command.name, cmd.command.key, cmd.command.description)
+		cmdText := fmt.Sprintf("%-20s %-12s %s", cmd.command.Name, cmd.command.Key, cmd.command.Description)
 		line := ""
 		if i == d.selectedIdx {
 			line = lipgloss.NewStyle().
