@@ -172,10 +172,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.activeDialog = nil
 		}
 
-		// Dialog may have returned a command, let it propagate
-		if cmd != nil {
-			return m, cmd
-		}
+		// Return immediately to prevent the message from reaching the underlying buffer
+		// This ensures that keyboard input (like arrow keys) only affects the dialog
+		return m, cmd
 	}
 
 	// Handle custom dialog result messages
