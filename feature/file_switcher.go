@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	macro "github.com/shkschneider/macro/core"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/sahilm/fuzzy"
+	macro "github.com/shkschneider/macro/core"
 )
 
 // ====== Command Registration ======
@@ -20,7 +20,7 @@ func FileSwitcherCommand() macro.CommandDef {
 	return macro.CommandDef{
 		Name:        "file-open",
 		Key:         "Ctrl-Space",
-		Description: "Open file switcher dialog",
+		Description: "Open file switcher (lists files in current buffer's directory)",
 	}
 }
 
@@ -128,7 +128,7 @@ func (d *FileDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
 	var cmd tea.Cmd
 	oldValue := d.filterInput.Value()
 	d.filterInput, cmd = d.filterInput.Update(msg)
-	
+
 	// Only apply filter if the query actually changed
 	if d.filterInput.Value() != oldValue {
 		d.applyFuzzyFilter()
