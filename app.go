@@ -16,16 +16,7 @@ import (
 )
 
 var (
-	// Use styles from core package
-	statusBarStyle   = core.StatusBarStyle
-	messageStyle     = core.MessageStyle
-	errorStyle       = core.ErrorStyle
-	successStyle     = core.SuccessStyle
-	warningStyle     = core.WarningStyle
-	dialogBoxStyle   = core.DialogBoxStyle
-	dialogTitleStyle = core.DialogTitleStyle
-
-	defaultMessage = "Macro v0.7.0 | Hit Ctrl-H for Help."
+	defaultMessage = "Macro v0.8.0 | Hit Ctrl-H for Help."
 	termWidth      = 0 // Will be updated on WindowSizeMsg
 	termHeight     = 0 // Will be updated on WindowSizeMsg
 )
@@ -308,7 +299,7 @@ func (m model) View() string {
 		return fmt.Sprintf("%s\n\n%s\n\n%s",
 			lipgloss.NewStyle().Bold(true).Render("macro - Select a file"),
 			m.filepicker.View(),
-			messageStyle.Render("↑/↓: Navigate | Enter: Select | Ctrl-Q: Quit"))
+			core.MessageStyle.Render("↑/↓: Navigate | Enter: Select | Ctrl-Q: Quit"))
 	}
 
 	// Content area - use viewport for read-only, textarea for writable
@@ -333,18 +324,18 @@ func (m model) View() string {
 	}
 
 	// Apply width to fill the entire line with reverse video
-	statusBar := statusBarStyle.Width(termWidth).Render(statusInfo)
+	statusBar := core.StatusBarStyle.Width(termWidth).Render(statusInfo)
 
 	// Message line for warnings/errors/info
 	var messageLine string
 	if m.err != nil {
-		messageLine = errorStyle.Render(m.message)
+		messageLine = core.ErrorStyle.Render(m.message)
 	} else if strings.Contains(m.message, "WARNING") || strings.Contains(m.message, "read-only") {
-		messageLine = warningStyle.Render(m.message)
+		messageLine = core.WarningStyle.Render(m.message)
 	} else if m.message != defaultMessage {
-		messageLine = successStyle.Render(m.message)
+		messageLine = core.SuccessStyle.Render(m.message)
 	} else {
-		messageLine = messageStyle.Render(m.message)
+		messageLine = core.MessageStyle.Render(m.message)
 	}
 
 	baseView := fmt.Sprintf(
