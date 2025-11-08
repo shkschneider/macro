@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/shkschneider/macro/core"
 	"github.com/shkschneider/macro/feature"
 )
 
@@ -224,7 +225,7 @@ func TestBufferDialog(t *testing.T) {
 	}
 
 	// Convert to BufferInfo for dialog
-	bufferInfos := []feature.BufferInfo{
+	bufferInfos := []core.BufferInfo{
 		{FilePath: file1Path, ReadOnly: false},
 		{FilePath: file2Path, ReadOnly: false},
 	}
@@ -239,7 +240,7 @@ func TestBufferDialog(t *testing.T) {
 	}
 
 	// Test with no buffers
-	dialog2 := feature.NewBufferDialog([]feature.BufferInfo{}, -1)
+	dialog2 := feature.NewBufferDialog([]core.BufferInfo{}, -1)
 	if dialog2 == nil {
 		t.Fatal("Expected feature.NewBufferDialog to return a dialog even with no buffers")
 	}
@@ -247,7 +248,7 @@ func TestBufferDialog(t *testing.T) {
 
 func TestHelpDialog(t *testing.T) {
 	// Create some test commands
-	testCommands := []feature.CommandDef{
+	testCommands := []core.CommandDef{
 		{Name: "file-save", Key: "Ctrl-S", Description: "Save file"},
 		{Name: "quit", Key: "Ctrl-Q", Description: "Quit editor"},
 	}
