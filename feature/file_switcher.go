@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	macro "github.com/shkschneider/macro/core"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -15,8 +16,8 @@ import (
 // ====== Command Registration ======
 
 // FileSwitcherCommand returns the command definition for file switching
-func FileSwitcherCommand() CommandDef {
-	return CommandDef{
+func FileSwitcherCommand() macro.CommandDef {
+	return macro.CommandDef{
 		Name:        "file-open",
 		Key:         "Ctrl-Space",
 		Description: "Open file switcher dialog",
@@ -88,7 +89,7 @@ func (d *FileDialog) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (d *FileDialog) Update(msg tea.Msg) (Dialog, tea.Cmd) {
+func (d *FileDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {

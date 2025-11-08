@@ -11,7 +11,8 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/shkschneider/macro/feature"
+	core "github.com/shkschneider/macro/core"
+	feature "github.com/shkschneider/macro/feature"
 )
 
 var (
@@ -50,7 +51,7 @@ type model struct {
 	message      string   // Message line for errors/warnings/info
 	err          error
 	showPicker   bool
-	activeDialog feature.Dialog // Single active dialog (nil when closed)
+	activeDialog core.Dialog // Single active dialog (nil when closed)
 }
 
 func initialModel(filePath string) model {
@@ -154,7 +155,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if statErr == nil {
 					readOnly = info.Mode()&0200 == 0
 				}
-				
+
 				bufferIdx := m.addBuffer(path, string(content), readOnly)
 				m.loadBuffer(bufferIdx)
 				m.message = defaultMessage
@@ -186,12 +187,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// If showing dialog, handle dialog messages
 	if m.activeDialog != nil {
 		m.activeDialog, cmd = m.activeDialog.Update(msg)
-		
+
 		// Check if dialog was closed
 		if !m.activeDialog.IsVisible() {
 			m.activeDialog = nil
 		}
-		
+
 		// Dialog may have returned a command, let it propagate
 		if cmd != nil {
 			return m, cmd
@@ -209,7 +210,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if statErr == nil {
 				readOnly = info.Mode()&0200 == 0
 			}
-			
+
 			bufferIdx := m.addBuffer(msg.Path, string(content), readOnly)
 			m.loadBuffer(bufferIdx)
 			m.message = fmt.Sprintf("Opened %s", filepath.Base(msg.Path))
@@ -219,13 +220,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = err
 		}
 		return m, nil
-		
+
 	case feature.BufferSelectedMsg:
 		// Switch to selected buffer
 		m.loadBuffer(msg.Index)
 		m.message = fmt.Sprintf("Switched to buffer")
 		return m, nil
-		
+
 	case feature.CommandSelectedMsg:
 		// Execute the selected command
 		cmd := getCommandByName(msg.CommandName)
@@ -233,7 +234,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd.Execute(&m)
 		}
 		return m, nil
-		
+
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlQ:
@@ -257,9 +258,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "ctrl+b" {
 			if len(m.buffers) > 0 {
 				// Convert buffers to BufferInfo
-				var bufferInfos []feature.BufferInfo
+				var bufferInfos []core.BufferInfo
 				for _, buf := range m.buffers {
-					bufferInfos = append(bufferInfos, feature.BufferInfo{
+					bufferInfos = append(bufferInfos, core.BufferInfo{
 						FilePath: buf.filePath,
 						ReadOnly: buf.readOnly,
 					})
@@ -274,9 +275,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Check for Ctrl-H to open help dialog
 		if msg.String() == "ctrl+h" {
 			// Get all commands
-			var commands []feature.CommandDef
+			var commands []core.CommandDef
 			for _, cmd := range getKeybindings() {
-				commands = append(commands, feature.CommandDef{
+				commands = append(commands, core.CommandDef{
 					Name:        cmd.Name,
 					Key:         cmd.Key,
 					Description: cmd.Description,
@@ -285,7 +286,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.activeDialog = feature.NewHelpDialog(commands)
 			return m, m.activeDialog.Init()
 		}
-		
+
 	case tea.WindowSizeMsg:
 		contentHeight := msg.Height - 2
 		if contentHeight < 1 {
@@ -368,7 +369,7 @@ func (m model) View() string {
 	// If showing dialog, overlay it on top of the base view
 	if m.activeDialog != nil && m.activeDialog.IsVisible() {
 		dialog := m.activeDialog.View(termWidth, termHeight)
-		return overlayDialog(baseView, dialog, termWidth, termHeight)
+		return core.OverlayDialog(baseView, dialog, termWidth, termHeight)
 	}
 
 	return baseView

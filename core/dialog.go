@@ -1,13 +1,22 @@
-package main
+package core
 
 import (
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
+// Dialog interface defines the contract for all dialogs
+type Dialog interface {
+	Init() tea.Cmd
+	Update(tea.Msg) (Dialog, tea.Cmd)
+	View(termWidth, termHeight int) string
+	IsVisible() bool
+}
+
 // overlayDialog overlays the dialog centered on top of the base view
-func overlayDialog(baseView, dialog string, termWidth, termHeight int) string {
+func OverlayDialog(baseView, dialog string, termWidth, termHeight int) string {
 	if termWidth == 0 || termHeight == 0 {
 		return baseView
 	}

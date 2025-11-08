@@ -1,4 +1,4 @@
-package feature
+package core
 
 // CommandDef defines a command without execution logic
 type CommandDef struct {

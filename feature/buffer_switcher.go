@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	macro "github.com/shkschneider/macro/core"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -14,8 +15,8 @@ import (
 // ====== Command Registration ======
 
 // BufferSwitcherCommand returns the command definition for buffer switching
-func BufferSwitcherCommand() CommandDef {
-	return CommandDef{
+func BufferSwitcherCommand() macro.CommandDef {
+	return macro.CommandDef{
 		Name:        "buffer-switch",
 		Key:         "Ctrl-B",
 		Description: "Open buffer switcher dialog",
@@ -50,7 +51,7 @@ type BufferDialog struct {
 }
 
 // NewBufferDialog creates a new buffer dialog
-func NewBufferDialog(buffers []BufferInfo, currentBuffer int) *BufferDialog {
+func NewBufferDialog(buffers []macro.BufferInfo, currentBuffer int) *BufferDialog {
 	ti := textinput.New()
 	ti.Placeholder = "Type to filter buffers..."
 	ti.CharLimit = 100
@@ -86,7 +87,7 @@ func (d *BufferDialog) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (d *BufferDialog) Update(msg tea.Msg) (Dialog, tea.Cmd) {
+func (d *BufferDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	macro "github.com/shkschneider/macro/core"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -13,8 +14,8 @@ import (
 // ====== Command Registration ======
 
 // HelpCommand returns the command definition for showing help
-func HelpCommand() CommandDef {
-	return CommandDef{
+func HelpCommand() macro.CommandDef {
+	return macro.CommandDef{
 		Name:        "help-show",
 		Key:         "Ctrl-H",
 		Description: "Show this help dialog",
@@ -32,7 +33,7 @@ type CommandSelectedMsg struct {
 
 // commandItem is used internally by HelpDialog
 type commandItem struct {
-	command CommandDef
+	command macro.CommandDef
 }
 
 // ====== Dialog Implementation ======
@@ -48,7 +49,7 @@ type HelpDialog struct {
 }
 
 // NewHelpDialog creates a new help dialog
-func NewHelpDialog(commands []CommandDef) *HelpDialog {
+func NewHelpDialog(commands []macro.CommandDef) *HelpDialog {
 	ti := textinput.New()
 	ti.Placeholder = "Type to filter commands..."
 	ti.CharLimit = 100
@@ -76,7 +77,7 @@ func (d *HelpDialog) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (d *HelpDialog) Update(msg tea.Msg) (Dialog, tea.Cmd) {
+func (d *HelpDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
