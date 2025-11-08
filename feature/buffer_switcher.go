@@ -46,6 +46,7 @@ type BufferDialog struct {
 	filteredBuffers []bufferItem
 	selectedIdx     int
 	visible         bool
+	lastQuery       string // Track last query to avoid unnecessary resets
 }
 
 // NewBufferDialog creates a new buffer dialog
@@ -122,8 +123,13 @@ func (d *BufferDialog) Update(msg tea.Msg) (Dialog, tea.Cmd) {
 
 	// Update filter input
 	var cmd tea.Cmd
+	oldValue := d.filterInput.Value()
 	d.filterInput, cmd = d.filterInput.Update(msg)
-	d.applyFuzzyFilter()
+	
+	// Only apply filter if the query actually changed
+	if d.filterInput.Value() != oldValue {
+		d.applyFuzzyFilter()
+	}
 	return d, cmd
 }
 
@@ -132,7 +138,11 @@ func (d *BufferDialog) applyFuzzyFilter() {
 
 	if query == "" {
 		d.filteredBuffers = d.allBuffers
-		d.selectedIdx = 0
+		// Only reset selection if query actually changed (not just cursor blink)
+		if d.lastQuery != "" {
+			d.selectedIdx = 0
+		}
+		d.lastQuery = query
 		return
 	}
 
@@ -151,7 +161,11 @@ func (d *BufferDialog) applyFuzzyFilter() {
 		d.filteredBuffers = append(d.filteredBuffers, d.allBuffers[match.Index])
 	}
 
-	d.selectedIdx = 0
+	// Only reset selection when the query changes, not on every blink
+	if d.lastQuery != query {
+		d.selectedIdx = 0
+	}
+	d.lastQuery = query
 }
 
 func (d *BufferDialog) View(termWidth, termHeight int) string {

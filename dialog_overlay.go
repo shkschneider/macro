@@ -40,31 +40,22 @@ func overlayDialog(baseView, dialog string, termWidth, termHeight int) string {
 	for i, dialogLine := range dialogLines {
 		y := startY + i
 		if y >= 0 && y < len(baseLines) {
-			baseLine := baseLines[y]
-			baseWidth := lipgloss.Width(baseLine)
-
-			if baseWidth < termWidth {
-				baseLine += strings.Repeat(" ", termWidth-baseWidth)
-			}
-
-			dialogLineWidth := lipgloss.Width(dialogLine)
-
+			// Build the new line by rendering spaces and the dialog content
 			var newLine strings.Builder
-
+			
+			// Add left padding (spaces before dialog)
 			if startX > 0 {
-				leftPart := baseLine
-				if len(leftPart) > startX {
-					leftPart = leftPart[:startX]
-				}
-				newLine.WriteString(leftPart)
+				newLine.WriteString(strings.Repeat(" ", startX))
 			}
-
+			
+			// Add the dialog line
 			newLine.WriteString(dialogLine)
-
+			
+			// Add right padding to fill the terminal width
+			dialogLineWidth := lipgloss.Width(dialogLine)
 			endX := startX + dialogLineWidth
-			if endX < baseWidth {
-				rightPart := baseLine[endX:]
-				newLine.WriteString(rightPart)
+			if endX < termWidth {
+				newLine.WriteString(strings.Repeat(" ", termWidth-endX))
 			}
 
 			baseLines[y] = newLine.String()
