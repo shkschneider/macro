@@ -10,10 +10,32 @@ import (
 	"github.com/sahilm/fuzzy"
 )
 
+// ====== Command Registration ======
+
+func init() {
+	registerCommand(Command{
+		name:        "help-show",
+		key:         "Ctrl-H",
+		description: "Show this help dialog",
+		execute:     nil, // Handled directly in main Update loop
+	})
+}
+
+// ====== Message Types ======
+
+// CommandSelectedMsg is sent when a command is selected in the help dialog
+type CommandSelectedMsg struct {
+	CommandName string
+}
+
+// ====== Internal Types ======
+
 // commandItem is used internally by HelpDialog
 type commandItem struct {
 	command Command
 }
+
+// ====== Dialog Implementation ======
 
 // HelpDialog implements the Dialog interface for help/command selection
 type HelpDialog struct {

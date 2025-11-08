@@ -9,20 +9,3 @@ type Dialog interface {
 	View(termWidth, termHeight int) string
 	IsVisible() bool
 }
-
-// Custom message types for dialog results
-
-// FileSelectedMsg is sent when a file is selected in the file dialog
-type FileSelectedMsg struct {
-	Path string
-}
-
-// BufferSelectedMsg is sent when a buffer is selected in the buffer dialog
-type BufferSelectedMsg struct {
-	Index int
-}
-
-// CommandSelectedMsg is sent when a command is selected in the help dialog
-type CommandSelectedMsg struct {
-	CommandName string
-}

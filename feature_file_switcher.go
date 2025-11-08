@@ -12,11 +12,33 @@ import (
 	"github.com/sahilm/fuzzy"
 )
 
+// ====== Command Registration ======
+
+func init() {
+	registerCommand(Command{
+		name:        "file-open",
+		key:         "Ctrl-Space",
+		description: "Open file switcher dialog",
+		execute:     nil, // Handled directly in main Update loop
+	})
+}
+
+// ====== Message Types ======
+
+// FileSelectedMsg is sent when a file is selected in the file dialog
+type FileSelectedMsg struct {
+	Path string
+}
+
+// ====== Internal Types ======
+
 // fileItem is used internally by FileDialog
 type fileItem struct {
 	name string
 	path string
 }
+
+// ====== Dialog Implementation ======
 
 // FileDialog implements the Dialog interface for file selection
 type FileDialog struct {

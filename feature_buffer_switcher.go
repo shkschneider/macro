@@ -11,11 +11,33 @@ import (
 	"github.com/sahilm/fuzzy"
 )
 
+// ====== Command Registration ======
+
+func init() {
+	registerCommand(Command{
+		name:        "buffer-switch",
+		key:         "Ctrl-B",
+		description: "Open buffer switcher dialog",
+		execute:     nil, // Handled directly in main Update loop
+	})
+}
+
+// ====== Message Types ======
+
+// BufferSelectedMsg is sent when a buffer is selected in the buffer dialog
+type BufferSelectedMsg struct {
+	Index int
+}
+
+// ====== Internal Types ======
+
 // bufferItem is used internally by BufferDialog
 type bufferItem struct {
 	name  string
 	index int
 }
+
+// ====== Dialog Implementation ======
 
 // BufferDialog implements the Dialog interface for buffer selection
 type BufferDialog struct {
