@@ -1,5 +1,7 @@
 package main
 
+import "strings"
+
 // Buffer represents an open file with its state
 type Buffer struct {
 	filePath string
@@ -13,6 +15,35 @@ func (m *model) moveCursorToTop() {
 	for m.textarea.Line() > 0 {
 		m.textarea.CursorUp()
 	}
+}
+
+// gotoLine moves the cursor to the specified line and column
+func (m *model) gotoLine(targetLine int, targetCol int) {
+	if m.isCurrentBufferReadOnly() {
+		// For read-only buffers using viewport
+		content := m.buffers[m.currentBuffer].content
+		lines := strings.Split(content, "\n")
+		if targetLine > 0 && targetLine <= len(lines) {
+			// Calculate offset to scroll to line
+			m.viewport.SetYOffset(targetLine - 1)
+		}
+		return
+	}
+
+	// For editable buffers, move cursor using textarea methods
+	// First, move to top
+	m.moveCursorToTop()
+	
+	// Move down to target line (1-based, so targetLine-1 moves)
+	for i := 1; i < targetLine; i++ {
+		m.textarea.CursorDown()
+	}
+	
+	// Move to start of line
+	m.textarea.CursorStart()
+	
+	// Note: Column positioning for textarea is not directly supported
+	// The textarea will place cursor at the start of the target line
 }
 
 // loadBuffer loads a buffer's content into the UI (textarea or viewport)

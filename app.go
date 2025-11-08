@@ -214,6 +214,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case feature.GotoLineMsg:
+		// Move cursor to specified line and column
+		m.gotoLine(msg.Line, msg.Col)
+		m.message = fmt.Sprintf("Jumped to line %d", msg.Line)
+		return m, nil
+
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlQ:
@@ -264,6 +270,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.activeDialog = feature.NewHelpDialog(commands)
 			return m, m.activeDialog.Init()
+		}
+		// Check for Ctrl-G to open goto dialog
+		if msg.String() == "ctrl+g" {
+			if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
+				// Get current buffer content from the buffer itself, not the UI
+				var content string
+				if m.isCurrentBufferReadOnly() {
+					content = m.buffers[m.currentBuffer].content
+				} else {
+					// For editable buffers, save current state first
+					m.saveCurrentBufferState()
+					content = m.buffers[m.currentBuffer].content
+				}
+				m.activeDialog = feature.NewGotoDialog(content)
+				return m, m.activeDialog.Init()
+			} else {
+				m.message = "No buffer open"
+			}
+			return m, nil
 		}
 
 	case tea.WindowSizeMsg:

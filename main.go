@@ -29,6 +29,12 @@ func main() {
 		Execute:     nil,
 	})
 	registerCommand(Command{
+		Name:        feature.GotoCommand().Name,
+		Key:         feature.GotoCommand().Key,
+		Description: feature.GotoCommand().Description,
+		Execute:     nil,
+	})
+	registerCommand(Command{
 		Name:        feature.SaveCommand().Name,
 		Key:         feature.SaveCommand().Key,
 		Description: feature.SaveCommand().Description,
