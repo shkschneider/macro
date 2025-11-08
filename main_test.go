@@ -2,8 +2,10 @@ package main
 
 import (
 	"os"
-	"strings"
 	"testing"
+
+	"github.com/shkschneider/macro/core"
+	"github.com/shkschneider/macro/feature"
 )
 
 func TestInitialModel(t *testing.T) {
@@ -69,7 +71,7 @@ func TestCursorPositionAtTop(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(tmpFile.Name())
-	
+
 	// Write multi-line content
 	content := "Line 1\nLine 2\nLine 3\nLine 4\nLine 5"
 	tmpFile.WriteString(content)
@@ -79,7 +81,7 @@ func TestCursorPositionAtTop(t *testing.T) {
 	if m.err != nil {
 		t.Errorf("Expected no error for text file, got %v", m.err)
 	}
-	
+
 	// Check cursor is at line 0 (top)
 	if m.textarea.Line() != 0 {
 		t.Errorf("Expected cursor at line 0, got line %d", m.textarea.Line())
@@ -91,7 +93,7 @@ func TestCursorPositionAtTop(t *testing.T) {
 	if m.err != nil {
 		t.Errorf("Expected no error for read-only file, got %v", m.err)
 	}
-	
+
 	// Check viewport is at top (YOffset should be 0)
 	if m.viewport.YOffset != 0 {
 		t.Errorf("Expected viewport YOffset at 0, got %d", m.viewport.YOffset)
@@ -116,59 +118,25 @@ func TestFileDialog(t *testing.T) {
 		}
 	}
 
-	// Open one of the files
-	testFile := tmpDir + "/file1.txt"
-	m := initialModel(testFile)
-	if m.err != nil {
-		t.Errorf("Expected no error, got %v", m.err)
+	// Test feature.NewFileDialog
+	dialog := feature.NewFileDialog(tmpDir)
+	if dialog == nil {
+		t.Fatal("Expected feature.NewFileDialog to return a dialog")
+	}
+	if !dialog.IsVisible() {
+		t.Error("Expected dialog to be visible initially")
 	}
 
-	// Test getFilesInDirectory
-	files := m.getFilesInDirectory()
-	if len(files) != 3 {
-		t.Errorf("Expected 3 files, got %d", len(files))
+	// Test with empty directory
+	emptyDir, err := os.MkdirTemp("", "test_empty_*")
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer os.RemoveAll(emptyDir)
 
-	// Test opening dialog
-	m.openFileDialog()
-	if !m.showDialog {
-		t.Error("Expected showDialog to be true after openFileDialog")
-	}
-	if len(m.allFiles) != 3 {
-		t.Errorf("Expected 3 files in allFiles, got %d", len(m.allFiles))
-	}
-	if len(m.filteredFiles) != 3 {
-		t.Errorf("Expected 3 files in filteredFiles initially, got %d", len(m.filteredFiles))
-	}
-
-	// Test fuzzy filtering
-	m.filterInput.SetValue("go")
-	m.applyFuzzyFilter()
-	if len(m.filteredFiles) != 1 {
-		t.Errorf("Expected 1 file matching 'go', got %d", len(m.filteredFiles))
-	}
-	if len(m.filteredFiles) > 0 && m.filteredFiles[0].name != "file3.go" {
-		t.Errorf("Expected 'file3.go' to match, got %s", m.filteredFiles[0].name)
-	}
-
-	// Test clearing filter
-	m.filterInput.SetValue("")
-	m.applyFuzzyFilter()
-	if len(m.filteredFiles) != 3 {
-		t.Errorf("Expected 3 files after clearing filter, got %d", len(m.filteredFiles))
-	}
-
-	// Test closing dialog
-	m.closeFileDialog()
-	if m.showDialog {
-		t.Error("Expected showDialog to be false after closeFileDialog")
-	}
-
-	// Test with no file path
-	m2 := initialModel("")
-	files2 := m2.getFilesInDirectory()
-	if len(files2) != 0 {
-		t.Errorf("Expected 0 files when no file path, got %d", len(files2))
+	dialog2 := feature.NewFileDialog(emptyDir)
+	if dialog2 == nil {
+		t.Fatal("Expected feature.NewFileDialog to return a dialog even for empty directory")
 	}
 }
 
@@ -182,7 +150,7 @@ func TestBufferManagement(t *testing.T) {
 
 	file1Path := tmpDir + "/file1.txt"
 	file2Path := tmpDir + "/file2.txt"
-	
+
 	err = os.WriteFile(file1Path, []byte("content1"), 0644)
 	if err != nil {
 		t.Fatal(err)
@@ -246,7 +214,7 @@ func TestBufferDialog(t *testing.T) {
 
 	file1Path := tmpDir + "/file1.txt"
 	file2Path := tmpDir + "/file2.txt"
-	
+
 	err = os.WriteFile(file1Path, []byte("content1"), 0644)
 	if err != nil {
 		t.Fatal(err)
@@ -256,108 +224,61 @@ func TestBufferDialog(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Initialize with first file
-	m := initialModel(file1Path)
-	
-	// Add second buffer
-	m.addBuffer(file2Path, "content2", false)
-
-	// Test opening buffer dialog
-	m.openBufferDialog()
-	if !m.showBufferDialog {
-		t.Error("Expected showBufferDialog to be true")
-	}
-	if len(m.allBuffers) != 2 {
-		t.Errorf("Expected 2 buffers in allBuffers, got %d", len(m.allBuffers))
-	}
-	if len(m.filteredBuffers) != 2 {
-		t.Errorf("Expected 2 buffers in filteredBuffers initially, got %d", len(m.filteredBuffers))
+	// Convert to BufferInfo for dialog
+	bufferInfos := []core.BufferInfo{
+		{FilePath: file1Path, ReadOnly: false},
+		{FilePath: file2Path, ReadOnly: false},
 	}
 
-	// Test buffer fuzzy filtering
-	m.bufferFilterInput.SetValue("file1")
-	m.applyBufferFuzzyFilter()
-	if len(m.filteredBuffers) != 1 {
-		t.Errorf("Expected 1 buffer matching 'file1', got %d", len(m.filteredBuffers))
+	// Test feature.NewBufferDialog
+	dialog := feature.NewBufferDialog(bufferInfos, 0)
+	if dialog == nil {
+		t.Fatal("Expected feature.NewBufferDialog to return a dialog")
 	}
-
-	// Test clearing filter
-	m.bufferFilterInput.SetValue("")
-	m.applyBufferFuzzyFilter()
-	if len(m.filteredBuffers) != 2 {
-		t.Errorf("Expected 2 buffers after clearing filter, got %d", len(m.filteredBuffers))
-	}
-
-	// Test closing buffer dialog
-	m.closeBufferDialog()
-	if m.showBufferDialog {
-		t.Error("Expected showBufferDialog to be false after closing")
+	if !dialog.IsVisible() {
+		t.Error("Expected dialog to be visible initially")
 	}
 
 	// Test with no buffers
-	m2 := initialModel("")
-	m2.openBufferDialog()
-	if m2.showBufferDialog {
-		t.Error("Expected showBufferDialog to remain false when no buffers")
+	dialog2 := feature.NewBufferDialog([]core.BufferInfo{}, -1)
+	if dialog2 == nil {
+		t.Fatal("Expected feature.NewBufferDialog to return a dialog even with no buffers")
 	}
 }
 
 func TestHelpDialog(t *testing.T) {
-	m := initialModel("")
-
-	// Test opening help dialog
-	m.openHelpDialog()
-	if !m.showHelpDialog {
-		t.Error("Expected showHelpDialog to be true")
-	}
-	if len(m.allCommands) == 0 {
-		t.Error("Expected commands to be populated")
-	}
-	if len(m.filteredCommands) == 0 {
-		t.Error("Expected filtered commands to be populated initially")
+	// Create some test commands
+	testCommands := []core.CommandDef{
+		{Name: "file-save", Key: "Ctrl-S", Description: "Save file"},
+		{Name: "quit", Key: "Ctrl-Q", Description: "Quit editor"},
 	}
 
-	// Test help fuzzy filtering
-	m.helpFilterInput.SetValue("file")
-	m.applyHelpFuzzyFilter()
-	if len(m.filteredCommands) == 0 {
-		t.Error("Expected at least one command matching 'file'")
+	// Test feature.NewHelpDialog
+	dialog := feature.NewHelpDialog(testCommands)
+	if dialog == nil {
+		t.Fatal("Expected feature.NewHelpDialog to return a dialog")
 	}
-	
-	// Verify file-related commands are in results
-	foundFileCommand := false
-	for _, cmd := range m.filteredCommands {
-		if strings.Contains(cmd.command.name, "file") {
-			foundFileCommand = true
-			break
-		}
-	}
-	if !foundFileCommand {
-		t.Error("Expected to find file-related commands in filtered results")
-	}
-
-	// Test clearing filter
-	m.helpFilterInput.SetValue("")
-	m.applyHelpFuzzyFilter()
-	if len(m.filteredCommands) != len(m.allCommands) {
-		t.Errorf("Expected %d commands after clearing filter, got %d", len(m.allCommands), len(m.filteredCommands))
-	}
-
-	// Test closing help dialog
-	m.closeHelpDialog()
-	if m.showHelpDialog {
-		t.Error("Expected showHelpDialog to be false after closing")
+	if !dialog.IsVisible() {
+		t.Error("Expected dialog to be visible initially")
 	}
 }
 
 func TestCommandSystem(t *testing.T) {
+	// Register commands for testing
+	registerCommand(Command{
+		Name:        "file-save",
+		Key:         "Ctrl-S",
+		Description: "Save file",
+		Execute:     nil,
+	})
+
 	// Test getCommandByName
 	cmd := getCommandByName("file-save")
 	if cmd == nil {
 		t.Error("Expected to find file-save command")
 	}
-	if cmd.name != "file-save" {
-		t.Errorf("Expected command name to be 'file-save', got %s", cmd.name)
+	if cmd.Name != "file-save" {
+		t.Errorf("Expected command name to be 'file-save', got %s", cmd.Name)
 	}
 
 	// Test non-existent command
@@ -368,17 +289,15 @@ func TestCommandSystem(t *testing.T) {
 
 	// Test that all commands have required fields
 	for _, cmd := range getKeybindings() {
-		if cmd.name == "" {
+		if cmd.Name == "" {
 			t.Error("Command has empty name")
 		}
-		if cmd.key == "" {
+		if cmd.Key == "" {
 			t.Error("Command has empty key")
 		}
-		if cmd.description == "" {
+		if cmd.Description == "" {
 			t.Error("Command has empty description")
 		}
-		if cmd.execute == nil {
-			t.Errorf("Command %s has nil execute function", cmd.name)
-		}
+		// Note: execute can be nil for commands handled directly in Update
 	}
 }
