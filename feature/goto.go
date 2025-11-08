@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	macro "github.com/shkschneider/macro/core"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/sahilm/fuzzy"
+	macro "github.com/shkschneider/macro/core"
 )
 
 // ====== Command Registration ======
@@ -144,13 +144,13 @@ func (d *GotoDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
 // parseLineCol parses input like "10" or "10:5" into line and column numbers
 func (d *GotoDialog) parseLineCol(input string) (int, int) {
 	parts := strings.Split(input, ":")
-	
+
 	// Parse line number
 	line, err := strconv.Atoi(parts[0])
 	if err != nil || line < 1 {
 		return 0, 0
 	}
-	
+
 	// Parse column number if provided
 	col := 0
 	if len(parts) > 1 {
@@ -159,7 +159,7 @@ func (d *GotoDialog) parseLineCol(input string) (int, int) {
 			col = parsedCol
 		}
 	}
-	
+
 	return line, col
 }
 

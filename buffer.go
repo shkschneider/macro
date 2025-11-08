@@ -33,15 +33,15 @@ func (m *model) gotoLine(targetLine int, targetCol int) {
 	// For editable buffers, move cursor using textarea methods
 	// First, move to top
 	m.moveCursorToTop()
-	
+
 	// Move down to target line (1-based, so targetLine-1 moves)
 	for i := 1; i < targetLine; i++ {
 		m.textarea.CursorDown()
 	}
-	
+
 	// Move to start of line
 	m.textarea.CursorStart()
-	
+
 	// Note: Column positioning for textarea is not directly supported
 	// The textarea will place cursor at the start of the target line
 }
