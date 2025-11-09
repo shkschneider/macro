@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -28,6 +29,36 @@ func BufferSwitcherCommand() macro.CommandDef {
 // BufferSelectedMsg is sent when a buffer is selected in the buffer dialog
 type BufferSelectedMsg struct {
 	Index int
+}
+
+// ====== Key Bindings ======
+
+// BufferDialogKeyMap defines the key bindings for the buffer dialog
+type BufferDialogKeyMap struct {
+	Close key.Binding
+	Up    key.Binding
+	Down  key.Binding
+	Enter key.Binding
+}
+
+// DefaultBufferDialogKeyMap returns the default key bindings for buffer dialog
+var DefaultBufferDialogKeyMap = BufferDialogKeyMap{
+	Close: key.NewBinding(
+		key.WithKeys("esc", "ctrl+c", "ctrl+b"),
+		key.WithHelp("esc", "close dialog"),
+	),
+	Up: key.NewBinding(
+		key.WithKeys("up", "ctrl+k"),
+		key.WithHelp("↑/ctrl+k", "move up"),
+	),
+	Down: key.NewBinding(
+		key.WithKeys("down", "ctrl+j"),
+		key.WithHelp("↓/ctrl+j", "move down"),
+	),
+	Enter: key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("enter", "switch buffer"),
+	),
 }
 
 // ====== Internal Types ======
@@ -90,11 +121,11 @@ func (d *BufferDialog) Init() tea.Cmd {
 func (d *BufferDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "esc", "ctrl+c", "ctrl+b":
+		if key.Matches(msg, DefaultBufferDialogKeyMap.Close) {
 			d.visible = false
 			return d, nil
-		case "enter":
+		}
+		if key.Matches(msg, DefaultBufferDialogKeyMap.Enter) {
 			if d.selectedIdx >= 0 && d.selectedIdx < len(d.filteredBuffers) {
 				selectedBuffer := d.filteredBuffers[d.selectedIdx]
 				d.visible = false
@@ -102,12 +133,14 @@ func (d *BufferDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
 					return BufferSelectedMsg{Index: selectedBuffer.index}
 				}
 			}
-		case "up", "ctrl+k":
+		}
+		if key.Matches(msg, DefaultBufferDialogKeyMap.Up) {
 			if d.selectedIdx > 0 {
 				d.selectedIdx--
 			}
 			return d, nil
-		case "down", "ctrl+j":
+		}
+		if key.Matches(msg, DefaultBufferDialogKeyMap.Down) {
 			if d.selectedIdx < len(d.filteredBuffers)-1 {
 				d.selectedIdx++
 			}

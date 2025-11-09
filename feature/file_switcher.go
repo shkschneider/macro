@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -29,6 +30,36 @@ func FileSwitcherCommand() macro.CommandDef {
 // FileSelectedMsg is sent when a file is selected in the file dialog
 type FileSelectedMsg struct {
 	Path string
+}
+
+// ====== Key Bindings ======
+
+// FileDialogKeyMap defines the key bindings for the file dialog
+type FileDialogKeyMap struct {
+	Close key.Binding
+	Up    key.Binding
+	Down  key.Binding
+	Enter key.Binding
+}
+
+// DefaultFileDialogKeyMap returns the default key bindings for file dialog
+var DefaultFileDialogKeyMap = FileDialogKeyMap{
+	Close: key.NewBinding(
+		key.WithKeys("esc", "ctrl+c", "ctrl+p"),
+		key.WithHelp("esc", "close dialog"),
+	),
+	Up: key.NewBinding(
+		key.WithKeys("up", "ctrl+k"),
+		key.WithHelp("↑/ctrl+k", "move up"),
+	),
+	Down: key.NewBinding(
+		key.WithKeys("down", "ctrl+j"),
+		key.WithHelp("↓/ctrl+j", "move down"),
+	),
+	Enter: key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("enter", "open file"),
+	),
 }
 
 // ====== Internal Types ======
@@ -92,11 +123,11 @@ func (d *FileDialog) Init() tea.Cmd {
 func (d *FileDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "esc", "ctrl+c", "ctrl+p":
+		if key.Matches(msg, DefaultFileDialogKeyMap.Close) {
 			d.visible = false
 			return d, nil
-		case "enter":
+		}
+		if key.Matches(msg, DefaultFileDialogKeyMap.Enter) {
 			if d.selectedIdx >= 0 && d.selectedIdx < len(d.filteredFiles) {
 				selectedFile := d.filteredFiles[d.selectedIdx]
 				d.visible = false
@@ -104,12 +135,14 @@ func (d *FileDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
 					return FileSelectedMsg{Path: selectedFile.path}
 				}
 			}
-		case "up", "ctrl+k":
+		}
+		if key.Matches(msg, DefaultFileDialogKeyMap.Up) {
 			if d.selectedIdx > 0 {
 				d.selectedIdx--
 			}
 			return d, nil
-		case "down", "ctrl+j":
+		}
+		if key.Matches(msg, DefaultFileDialogKeyMap.Down) {
 			if d.selectedIdx < len(d.filteredFiles)-1 {
 				d.selectedIdx++
 			}
