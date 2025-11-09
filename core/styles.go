@@ -31,6 +31,9 @@ var (
 				Bold(true).
 				Foreground(lipgloss.Color("230")).
 				Padding(0, 1)
+
+	DialogTitleLineStyle = lipgloss.NewStyle().
+				Bold(true)
 )
 
 // Dialog item styles (for lists)

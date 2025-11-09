@@ -8,7 +8,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/sahilm/fuzzy"
 	macro "github.com/shkschneider/macro/core"
 )
@@ -254,7 +253,7 @@ func (d *BufferDialog) View(termWidth, termHeight int) string {
 
 	title := macro.DialogTitleStyle.Render("Buffer Switcher")
 	bufferCount := fmt.Sprintf("(%d/%d buffers)", len(d.filteredBuffers), len(d.allBuffers))
-	titleLine := lipgloss.NewStyle().
+	titleLine := macro.DialogTitleLineStyle.
 		Width(dialogWidth - 4).
 		Render(title + " " + macro.DialogCountStyle.Render(bufferCount))
 

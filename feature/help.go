@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/sahilm/fuzzy"
 	macro "github.com/shkschneider/macro/core"
 )
@@ -245,7 +244,7 @@ func (d *HelpDialog) View(termWidth, termHeight int) string {
 
 	title := macro.DialogTitleStyle.Render("Command Palette")
 	cmdCount := fmt.Sprintf("(%d/%d commands)", len(d.filteredCommands), len(d.allCommands))
-	titleLine := lipgloss.NewStyle().
+	titleLine := macro.DialogTitleLineStyle.
 		Width(dialogWidth - 4).
 		Render(title + " " + macro.DialogCountStyle.Render(cmdCount))
 
