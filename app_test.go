@@ -24,7 +24,7 @@ func TestDefaultKeyMap_Save(t *testing.T) {
 func TestDefaultKeyMap_FileOpen(t *testing.T) {
 	// Test ctrl+p
 	msg := tea.KeyMsg{
-		Type: tea.KeyRunes,
+		Type:  tea.KeyRunes,
 		Runes: []rune{'p'},
 		Alt:   false,
 	}
