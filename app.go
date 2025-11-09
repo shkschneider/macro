@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/filepicker"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -20,6 +21,39 @@ var (
 	termWidth      = 0 // Will be updated on WindowSizeMsg
 	termHeight     = 0 // Will be updated on WindowSizeMsg
 )
+
+// KeyMap defines the key bindings for the application
+type KeyMap struct {
+	Quit           key.Binding
+	Save           key.Binding
+	CommandPalette key.Binding
+	FileOpen       key.Binding
+	BufferSwitch   key.Binding
+}
+
+// DefaultKeyMap returns the default key bindings
+var DefaultKeyMap = KeyMap{
+	Quit: key.NewBinding(
+		key.WithKeys("ctrl+q"),
+		key.WithHelp("ctrl+q", "quit editor"),
+	),
+	Save: key.NewBinding(
+		key.WithKeys("ctrl+s"),
+		key.WithHelp("ctrl+s", "save file"),
+	),
+	CommandPalette: key.NewBinding(
+		key.WithKeys("ctrl+@", "ctrl+ "), // ctrl+@ is what ctrl+space sends
+		key.WithHelp("ctrl+space", "open command palette"),
+	),
+	FileOpen: key.NewBinding(
+		key.WithKeys("ctrl+p"),
+		key.WithHelp("ctrl+p", "open file switcher"),
+	),
+	BufferSwitch: key.NewBinding(
+		key.WithKeys("ctrl+b"),
+		key.WithHelp("ctrl+b", "switch buffer"),
+	),
+}
 
 type model struct {
 	textarea      textarea.Model
@@ -110,8 +144,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.showPicker {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
-			switch msg.Type {
-			case tea.KeyCtrlQ:
+			if key.Matches(msg, DefaultKeyMap.Quit) {
 				return m, tea.Quit
 			}
 		case tea.WindowSizeMsg:
@@ -214,32 +247,32 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlQ:
+		// Handle key bindings using key.Matches
+		if key.Matches(msg, DefaultKeyMap.Quit) {
 			return m, tea.Quit
-		case tea.KeyCtrlS:
+		}
+		if key.Matches(msg, DefaultKeyMap.Save) {
 			cmd := getCommandByName("file-save")
 			if cmd != nil && cmd.Execute != nil {
 				return m, cmd.Execute(&m)
 			}
 			return m, nil
-		case tea.KeyCtrlAt: // Ctrl-Space (sends Ctrl-@)
+		}
+		if key.Matches(msg, DefaultKeyMap.CommandPalette) {
 			cmd := getCommandByName("help-show")
 			if cmd != nil && cmd.Execute != nil {
 				return m, cmd.Execute(&m)
 			}
 			return m, nil
 		}
-		// Check for Ctrl-P to open file switcher
-		if msg.String() == "ctrl+p" {
+		if key.Matches(msg, DefaultKeyMap.FileOpen) {
 			cmd := getCommandByName("file-open")
 			if cmd != nil && cmd.Execute != nil {
 				return m, cmd.Execute(&m)
 			}
 			return m, nil
 		}
-		// Check for Ctrl-B to open buffer dialog
-		if msg.String() == "ctrl+b" {
+		if key.Matches(msg, DefaultKeyMap.BufferSwitch) {
 			cmd := getCommandByName("buffer-switch")
 			if cmd != nil && cmd.Execute != nil {
 				return m, cmd.Execute(&m)

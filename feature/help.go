@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -27,6 +28,36 @@ func HelpCommand() macro.CommandDef {
 // CommandSelectedMsg is sent when a command is selected in the help dialog
 type CommandSelectedMsg struct {
 	CommandName string
+}
+
+// ====== Key Bindings ======
+
+// HelpDialogKeyMap defines the key bindings for the help dialog
+type HelpDialogKeyMap struct {
+	Close key.Binding
+	Up    key.Binding
+	Down  key.Binding
+	Enter key.Binding
+}
+
+// DefaultHelpDialogKeyMap returns the default key bindings for help dialog
+var DefaultHelpDialogKeyMap = HelpDialogKeyMap{
+	Close: key.NewBinding(
+		key.WithKeys("esc", "ctrl+c", "ctrl+@", "ctrl+ "),
+		key.WithHelp("esc", "close dialog"),
+	),
+	Up: key.NewBinding(
+		key.WithKeys("up", "ctrl+k"),
+		key.WithHelp("↑/ctrl+k", "move up"),
+	),
+	Down: key.NewBinding(
+		key.WithKeys("down", "ctrl+j"),
+		key.WithHelp("↓/ctrl+j", "move down"),
+	),
+	Enter: key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("enter", "run command"),
+	),
 }
 
 // ====== Internal Types ======
@@ -80,13 +111,11 @@ func (d *HelpDialog) Init() tea.Cmd {
 func (d *HelpDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyEsc, tea.KeyCtrlC, tea.KeyCtrlAt:
+		if key.Matches(msg, DefaultHelpDialogKeyMap.Close) {
 			d.visible = false
 			return d, nil
 		}
-		switch msg.String() {
-		case "enter":
+		if key.Matches(msg, DefaultHelpDialogKeyMap.Enter) {
 			if d.selectedIdx >= 0 && d.selectedIdx < len(d.filteredCommands) {
 				selectedCommand := d.filteredCommands[d.selectedIdx]
 				d.visible = false
@@ -94,12 +123,14 @@ func (d *HelpDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
 					return CommandSelectedMsg{CommandName: selectedCommand.command.Name}
 				}
 			}
-		case "up", "ctrl+k":
+		}
+		if key.Matches(msg, DefaultHelpDialogKeyMap.Up) {
 			if d.selectedIdx > 0 {
 				d.selectedIdx--
 			}
 			return d, nil
-		case "down", "ctrl+j":
+		}
+		if key.Matches(msg, DefaultHelpDialogKeyMap.Down) {
 			if d.selectedIdx < len(d.filteredCommands)-1 {
 				d.selectedIdx++
 			}
