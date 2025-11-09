@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	defaultMessage = "Macro v0.8.0 | Hit Ctrl-H for Help."
+	defaultMessage = "Macro v0.10.0 | Hit Ctrl-Space for Command Palette."
 	termWidth      = 0 // Will be updated on WindowSizeMsg
 	termHeight     = 0 // Will be updated on WindowSizeMsg
 )
@@ -223,46 +223,28 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, cmd.Execute(&m)
 			}
 			return m, nil
+		case tea.KeyCtrlAt: // Ctrl-Space (sends Ctrl-@)
+			cmd := getCommandByName("help-show")
+			if cmd != nil && cmd.Execute != nil {
+				return m, cmd.Execute(&m)
+			}
+			return m, nil
 		}
-		// Check for Ctrl-Space using string matching
-		if msg.String() == "ctrl+ " {
-			if m.getCurrentFilePath() != "" {
-				m.activeDialog = feature.NewFileDialog(filepath.Dir(m.getCurrentFilePath()))
-				return m, m.activeDialog.Init()
+		// Check for Ctrl-P to open file switcher
+		if msg.String() == "ctrl+p" {
+			cmd := getCommandByName("file-open")
+			if cmd != nil && cmd.Execute != nil {
+				return m, cmd.Execute(&m)
 			}
 			return m, nil
 		}
 		// Check for Ctrl-B to open buffer dialog
 		if msg.String() == "ctrl+b" {
-			if len(m.buffers) > 0 {
-				// Convert buffers to BufferInfo
-				var bufferInfos []core.BufferInfo
-				for _, buf := range m.buffers {
-					bufferInfos = append(bufferInfos, core.BufferInfo{
-						FilePath: buf.filePath,
-						ReadOnly: buf.readOnly,
-					})
-				}
-				m.activeDialog = feature.NewBufferDialog(bufferInfos, m.currentBuffer)
-				return m, m.activeDialog.Init()
-			} else {
-				m.message = "No buffers open"
+			cmd := getCommandByName("buffer-switch")
+			if cmd != nil && cmd.Execute != nil {
+				return m, cmd.Execute(&m)
 			}
 			return m, nil
-		}
-		// Check for Ctrl-H to open help dialog
-		if msg.String() == "ctrl+h" {
-			// Get all commands
-			var commands []core.CommandDef
-			for _, cmd := range getKeybindings() {
-				commands = append(commands, core.CommandDef{
-					Name:        cmd.Name,
-					Key:         cmd.Key,
-					Description: cmd.Description,
-				})
-			}
-			m.activeDialog = feature.NewHelpDialog(commands)
-			return m, m.activeDialog.Init()
 		}
 
 	case tea.WindowSizeMsg:
@@ -382,4 +364,47 @@ func executeFileSave(m *model) tea.Cmd {
 // executeQuit quits the editor
 func executeQuit(m *model) tea.Cmd {
 	return tea.Quit
+}
+
+// executeFileSwitcher opens the file switcher dialog
+func executeFileSwitcher(m *model) tea.Cmd {
+	if m.getCurrentFilePath() != "" {
+		m.activeDialog = feature.NewFileDialog(filepath.Dir(m.getCurrentFilePath()))
+		return m.activeDialog.Init()
+	}
+	m.message = "No file open to determine directory"
+	return nil
+}
+
+// executeBufferSwitcher opens the buffer switcher dialog
+func executeBufferSwitcher(m *model) tea.Cmd {
+	if len(m.buffers) > 0 {
+		// Convert buffers to BufferInfo
+		var bufferInfos []core.BufferInfo
+		for _, buf := range m.buffers {
+			bufferInfos = append(bufferInfos, core.BufferInfo{
+				FilePath: buf.filePath,
+				ReadOnly: buf.readOnly,
+			})
+		}
+		m.activeDialog = feature.NewBufferDialog(bufferInfos, m.currentBuffer)
+		return m.activeDialog.Init()
+	}
+	m.message = "No buffers open"
+	return nil
+}
+
+// executeCommandPalette opens the command palette dialog
+func executeCommandPalette(m *model) tea.Cmd {
+	// Get all commands
+	var commands []core.CommandDef
+	for _, cmd := range getKeybindings() {
+		commands = append(commands, core.CommandDef{
+			Name:        cmd.Name,
+			Key:         cmd.Key,
+			Description: cmd.Description,
+		})
+	}
+	m.activeDialog = feature.NewHelpDialog(commands)
+	return m.activeDialog.Init()
 }

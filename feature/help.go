@@ -17,8 +17,8 @@ import (
 func HelpCommand() macro.CommandDef {
 	return macro.CommandDef{
 		Name:        "help-show",
-		Key:         "Ctrl-H",
-		Description: "Show this help dialog",
+		Key:         "Ctrl-Space",
+		Description: "Show command palette",
 	}
 }
 
@@ -80,10 +80,12 @@ func (d *HelpDialog) Init() tea.Cmd {
 func (d *HelpDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "esc", "ctrl+c", "ctrl+h":
+		switch msg.Type {
+		case tea.KeyEsc, tea.KeyCtrlC, tea.KeyCtrlAt:
 			d.visible = false
 			return d, nil
+		}
+		switch msg.String() {
 		case "enter":
 			if d.selectedIdx >= 0 && d.selectedIdx < len(d.filteredCommands) {
 				selectedCommand := d.filteredCommands[d.selectedIdx]
@@ -210,7 +212,7 @@ func (d *HelpDialog) View(termWidth, termHeight int) string {
 		helpListView.WriteString(strings.Repeat(" ", dialogWidth-4) + "\n")
 	}
 
-	title := macro.DialogTitleStyle.Render("Help - Commands")
+	title := macro.DialogTitleStyle.Render("Command Palette")
 	cmdCount := fmt.Sprintf("(%d/%d commands)", len(d.filteredCommands), len(d.allCommands))
 	titleLine := lipgloss.NewStyle().
 		Width(dialogWidth - 4).
