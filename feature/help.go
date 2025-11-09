@@ -81,7 +81,7 @@ func (d *HelpDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc", "ctrl+c", "ctrl+h":
+		case "esc", "ctrl+c", "ctrl+ ":
 			d.visible = false
 			return d, nil
 		case "enter":
@@ -210,7 +210,7 @@ func (d *HelpDialog) View(termWidth, termHeight int) string {
 		helpListView.WriteString(strings.Repeat(" ", dialogWidth-4) + "\n")
 	}
 
-	title := macro.DialogTitleStyle.Render("Help - Commands")
+	title := macro.DialogTitleStyle.Render("Command Palette")
 	cmdCount := fmt.Sprintf("(%d/%d commands)", len(d.filteredCommands), len(d.allCommands))
 	titleLine := lipgloss.NewStyle().
 		Width(dialogWidth - 4).

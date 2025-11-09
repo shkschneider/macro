@@ -14,19 +14,19 @@ func main() {
 		Name:        feature.FileSwitcherCommand().Name,
 		Key:         feature.FileSwitcherCommand().Key,
 		Description: feature.FileSwitcherCommand().Description,
-		Execute:     nil,
+		Execute:     executeFileSwitcher,
 	})
 	registerCommand(Command{
 		Name:        feature.BufferSwitcherCommand().Name,
 		Key:         feature.BufferSwitcherCommand().Key,
 		Description: feature.BufferSwitcherCommand().Description,
-		Execute:     nil,
+		Execute:     executeBufferSwitcher,
 	})
 	registerCommand(Command{
 		Name:        feature.HelpCommand().Name,
 		Key:         feature.HelpCommand().Key,
 		Description: feature.HelpCommand().Description,
-		Execute:     nil,
+		Execute:     executeCommandPalette,
 	})
 	registerCommand(Command{
 		Name:        feature.SaveCommand().Name,

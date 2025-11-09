@@ -93,7 +93,7 @@ func (d *FileDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc", "ctrl+c", "ctrl+space":
+		case "esc", "ctrl+c", "ctrl+p":
 			d.visible = false
 			return d, nil
 		case "enter":
