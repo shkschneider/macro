@@ -80,10 +80,12 @@ func (d *HelpDialog) Init() tea.Cmd {
 func (d *HelpDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "esc", "ctrl+c", "ctrl+ ":
+		switch msg.Type {
+		case tea.KeyEsc, tea.KeyCtrlC, tea.KeyCtrlAt:
 			d.visible = false
 			return d, nil
+		}
+		switch msg.String() {
 		case "enter":
 			if d.selectedIdx >= 0 && d.selectedIdx < len(d.filteredCommands) {
 				selectedCommand := d.filteredCommands[d.selectedIdx]

@@ -223,9 +223,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, cmd.Execute(&m)
 			}
 			return m, nil
-		}
-		// Check for Ctrl-Space to open command palette
-		if msg.String() == "ctrl+ " {
+		case tea.KeyCtrlAt: // Ctrl-Space (sends Ctrl-@)
 			cmd := getCommandByName("help-show")
 			if cmd != nil && cmd.Execute != nil {
 				return m, cmd.Execute(&m)
