@@ -18,32 +18,17 @@ const (
 )
 
 // DiffTracker tracks changes between original and current content.
-// It tracks specific line operations (add, delete, modify) rather than
-// comparing entire content line-by-line.
+// It uses the original content to compute diffs on-demand.
 type DiffTracker struct {
 	originalLines []string
 	hasOriginal   bool
-
-	// Track specific changes by line index
-	addedLines    map[int]bool // Lines that were added (green)
-	modifiedLines map[int]bool // Lines that were modified (yellow)
-	deletedLines  map[int]bool // Line positions where content was deleted (red)
-
-	// Previous state for detecting changes
-	prevLineCount int
-	prevContent   string
 }
 
-// NewDiffTracker creates a new DiffTracker with the original content.
+// NewDiffTracker creates a new DiffTracker.
 func NewDiffTracker() *DiffTracker {
 	return &DiffTracker{
 		originalLines: nil,
 		hasOriginal:   false,
-		addedLines:    make(map[int]bool),
-		modifiedLines: make(map[int]bool),
-		deletedLines:  make(map[int]bool),
-		prevLineCount: 0,
-		prevContent:   "",
 	}
 }
 
@@ -51,23 +36,12 @@ func NewDiffTracker() *DiffTracker {
 func (d *DiffTracker) SetOriginal(content string) {
 	d.originalLines = splitLines(content)
 	d.hasOriginal = true
-	// Reset tracked changes
-	d.addedLines = make(map[int]bool)
-	d.modifiedLines = make(map[int]bool)
-	d.deletedLines = make(map[int]bool)
-	d.prevLineCount = len(d.originalLines)
-	d.prevContent = content
 }
 
 // ClearOriginal clears the original content (e.g., for new files).
 func (d *DiffTracker) ClearOriginal() {
 	d.originalLines = nil
 	d.hasOriginal = false
-	d.addedLines = make(map[int]bool)
-	d.modifiedLines = make(map[int]bool)
-	d.deletedLines = make(map[int]bool)
-	d.prevLineCount = 0
-	d.prevContent = ""
 }
 
 // HasOriginal returns true if original content has been set.
@@ -75,185 +49,169 @@ func (d *DiffTracker) HasOriginal() bool {
 	return d.hasOriginal
 }
 
-// UpdateContent should be called whenever the content changes.
-// It detects what type of change occurred and updates the tracked line states.
-func (d *DiffTracker) UpdateContent(currentContent string, cursorLine int) {
-	if !d.hasOriginal {
-		return
-	}
-
-	currentLines := splitLines(currentContent)
-	currentLineCount := len(currentLines)
-
-	// Detect type of change
-	if currentLineCount > d.prevLineCount {
-		// Lines were added - mark the cursor line as added
-		d.addedLines[cursorLine] = true
-		// Remove any deleted marker at this position
-		delete(d.deletedLines, cursorLine)
-		// Shift existing markers for lines after the insertion
-		d.shiftMarkersDown(cursorLine, currentLineCount-d.prevLineCount)
-	} else if currentLineCount < d.prevLineCount {
-		// Lines were deleted - mark this position as deleted
-		d.deletedLines[cursorLine] = true
-		// Remove any added marker at this position
-		delete(d.addedLines, cursorLine)
-		// Shift existing markers for lines after the deletion
-		d.shiftMarkersUp(cursorLine, d.prevLineCount-currentLineCount)
-	} else {
-		// Same line count - check if content on cursor line changed
-		if d.prevContent != currentContent {
-			// Content changed on the same number of lines
-			// Mark the cursor line as modified (unless it's already added)
-			if !d.addedLines[cursorLine] {
-				d.modifiedLines[cursorLine] = true
-			}
-		}
-	}
-
-	d.prevLineCount = currentLineCount
-	d.prevContent = currentContent
-}
-
-// shiftMarkersDown shifts all markers at or after position down by count positions
-func (d *DiffTracker) shiftMarkersDown(position int, count int) {
-	// Create new maps with shifted positions
-	newAdded := make(map[int]bool)
-	newModified := make(map[int]bool)
-	newDeleted := make(map[int]bool)
-
-	for line := range d.addedLines {
-		if line > position {
-			newAdded[line+count] = true
-		} else if line < position {
-			newAdded[line] = true
-		}
-		// Lines at exactly position are being replaced by the new added line
-	}
-	// Add the newly added line
-	newAdded[position] = true
-
-	for line := range d.modifiedLines {
-		if line >= position {
-			newModified[line+count] = true
-		} else {
-			newModified[line] = true
-		}
-	}
-
-	for line := range d.deletedLines {
-		if line >= position {
-			newDeleted[line+count] = true
-		} else {
-			newDeleted[line] = true
-		}
-	}
-
-	d.addedLines = newAdded
-	d.modifiedLines = newModified
-	d.deletedLines = newDeleted
-}
-
-// shiftMarkersUp shifts all markers after position up by count positions
-func (d *DiffTracker) shiftMarkersUp(position int, count int) {
-	// Create new maps with shifted positions
-	newAdded := make(map[int]bool)
-	newModified := make(map[int]bool)
-	newDeleted := make(map[int]bool)
-
-	for line := range d.addedLines {
-		if line > position {
-			newLine := line - count
-			if newLine >= 0 {
-				newAdded[newLine] = true
-			}
-		} else if line < position {
-			newAdded[line] = true
-		}
-		// Lines at position are being deleted, don't keep them
-	}
-
-	for line := range d.modifiedLines {
-		if line > position {
-			newLine := line - count
-			if newLine >= 0 {
-				newModified[newLine] = true
-			}
-		} else if line < position {
-			newModified[line] = true
-		}
-	}
-
-	for line := range d.deletedLines {
-		if line > position {
-			newLine := line - count
-			if newLine >= 0 {
-				newDeleted[newLine] = true
-			}
-		} else if line < position {
-			newDeleted[line] = true
-		}
-	}
-
-	// Mark the deleted position
-	newDeleted[position] = true
-
-	d.addedLines = newAdded
-	d.modifiedLines = newModified
-	d.deletedLines = newDeleted
-}
-
-// GetLineState returns the state of a specific line.
-func (d *DiffTracker) GetLineState(lineIdx int) LineState {
-	if d.addedLines[lineIdx] {
-		return LineAdded
-	}
-	if d.modifiedLines[lineIdx] {
-		return LineModified
-	}
-	if d.deletedLines[lineIdx] {
-		return LineDeleted
-	}
-	return LineUnchanged
-}
-
-// ComputeLineStates returns the state for each line in the current content.
+// ComputeLineStates computes the diff between original and current content.
+// Uses a simple LCS-based algorithm to properly detect added, modified, and deleted lines.
 func (d *DiffTracker) ComputeLineStates(currentContent string) []LineState {
 	currentLines := splitLines(currentContent)
-	states := make([]LineState, len(currentLines))
 
-	for i := range currentLines {
-		states[i] = d.GetLineState(i)
+	// If no original content, all lines are unchanged (new file)
+	if !d.hasOriginal {
+		return make([]LineState, len(currentLines))
 	}
 
-	return states
+	return computeLCSDiff(d.originalLines, currentLines)
 }
 
 // ComputeLineStatesWithDeletions returns line states plus deletion markers.
 func (d *DiffTracker) ComputeLineStatesWithDeletions(currentContent string) ([]LineState, []bool) {
+	states := d.ComputeLineStates(currentContent)
 	currentLines := splitLines(currentContent)
-	states := make([]LineState, len(currentLines))
 	deletedAt := make([]bool, len(currentLines)+1)
 
-	for i := range currentLines {
-		states[i] = d.GetLineState(i)
-	}
-
-	// Copy deleted line markers
-	for line := range d.deletedLines {
-		if line < len(deletedAt) {
-			deletedAt[line] = true
+	// Compute where deletions occurred
+	if d.hasOriginal && len(d.originalLines) > len(currentLines) {
+		// Original had more lines - find where they were deleted
+		lcs := computeLCS(d.originalLines, currentLines)
+		
+		// Track positions
+		lcsIdx := 0
+		currIdx := 0
+		
+		for origIdx := 0; origIdx < len(d.originalLines); origIdx++ {
+			if lcsIdx < len(lcs) && d.originalLines[origIdx] == lcs[lcsIdx] {
+				// This line is in LCS - advance current index to match
+				for currIdx < len(currentLines) && currentLines[currIdx] != lcs[lcsIdx] {
+					currIdx++
+				}
+				if currIdx < len(currentLines) {
+					currIdx++
+				}
+				lcsIdx++
+			} else {
+				// This original line is not in LCS
+				// Check if it was deleted (not present in current at all)
+				found := false
+				for _, c := range currentLines {
+					if c == d.originalLines[origIdx] {
+						found = true
+						break
+					}
+				}
+				if !found {
+					// Line was deleted - mark at the current position
+					if currIdx <= len(currentLines) {
+						deletedAt[currIdx] = true
+					}
+				}
+			}
 		}
 	}
 
 	return states, deletedAt
 }
 
-// splitLines splits content into lines, preserving empty lines.
+// splitLines splits content into lines.
 func splitLines(content string) []string {
 	if content == "" {
 		return []string{}
 	}
-
 	return strings.Split(content, "\n")
+}
+
+// computeLCSDiff computes line states using LCS algorithm.
+// Lines in LCS are unchanged, lines only in current are added,
+// lines only in original are deleted, and lines at same position with different content are modified.
+func computeLCSDiff(original, current []string) []LineState {
+	states := make([]LineState, len(current))
+
+	// Compute LCS
+	lcs := computeLCS(original, current)
+	lcsSet := make(map[string]int) // line content -> count in LCS
+	for _, line := range lcs {
+		lcsSet[line]++
+	}
+
+	// Track which original lines have been matched
+	originalMatched := make([]bool, len(original))
+	currentMatched := make([]bool, len(current))
+
+	// First pass: match lines that are in LCS
+	origIdx := 0
+	for i, line := range current {
+		// Find this line in remaining original
+		for j := origIdx; j < len(original); j++ {
+			if !originalMatched[j] && original[j] == line && lcsSet[line] > 0 {
+				originalMatched[j] = true
+				currentMatched[i] = true
+				lcsSet[line]--
+				states[i] = LineUnchanged
+				origIdx = j + 1
+				break
+			}
+		}
+	}
+
+	// Second pass: classify unmatched lines
+	for i := range current {
+		if currentMatched[i] {
+			continue // Already matched as unchanged
+		}
+
+		// Check if this position had an original line that was modified
+		if i < len(original) && !originalMatched[i] {
+			// Same position, different content = modified
+			states[i] = LineModified
+			originalMatched[i] = true
+		} else {
+			// Line doesn't correspond to any original line = added
+			states[i] = LineAdded
+		}
+	}
+
+	return states
+}
+
+// computeLCS computes the Longest Common Subsequence of two string slices.
+func computeLCS(a, b []string) []string {
+	m, n := len(a), len(b)
+	if m == 0 || n == 0 {
+		return []string{}
+	}
+
+	// Build LCS length table
+	dp := make([][]int, m+1)
+	for i := range dp {
+		dp[i] = make([]int, n+1)
+	}
+
+	for i := 1; i <= m; i++ {
+		for j := 1; j <= n; j++ {
+			if a[i-1] == b[j-1] {
+				dp[i][j] = dp[i-1][j-1] + 1
+			} else {
+				if dp[i-1][j] > dp[i][j-1] {
+					dp[i][j] = dp[i-1][j]
+				} else {
+					dp[i][j] = dp[i][j-1]
+				}
+			}
+		}
+	}
+
+	// Backtrack to find LCS
+	lcs := make([]string, 0, dp[m][n])
+	i, j := m, n
+	for i > 0 && j > 0 {
+		if a[i-1] == b[j-1] {
+			lcs = append([]string{a[i-1]}, lcs...)
+			i--
+			j--
+		} else if dp[i-1][j] > dp[i][j-1] {
+			i--
+		} else {
+			j--
+		}
+	}
+
+	return lcs
 }

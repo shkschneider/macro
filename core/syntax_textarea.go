@@ -175,21 +175,8 @@ func (s *SyntaxTextarea) SetCursorPosition(line, column int) {
 
 // Update handles messages and updates the textarea state.
 func (s *SyntaxTextarea) Update(msg tea.Msg) (*SyntaxTextarea, tea.Cmd) {
-	// Get content before update for comparison
-	prevContent := s.textarea.Value()
-
 	var cmd tea.Cmd
 	s.textarea, cmd = s.textarea.Update(msg)
-
-	// Get content after update
-	newContent := s.textarea.Value()
-
-	// If content changed, update the diff tracker
-	if prevContent != newContent {
-		cursorLine := s.textarea.Line()
-		s.diffTracker.UpdateContent(newContent, cursorLine)
-	}
-
 	return s, cmd
 }
 

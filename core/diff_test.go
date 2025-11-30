@@ -38,7 +38,6 @@ func TestDiffTracker_NoChanges(t *testing.T) {
 	content := "line1\nline2\nline3"
 	tracker.SetOriginal(content)
 
-	// No UpdateContent called, so all lines should be unchanged
 	states := tracker.ComputeLineStates(content)
 
 	if len(states) != 3 {
@@ -51,13 +50,11 @@ func TestDiffTracker_NoChanges(t *testing.T) {
 	}
 }
 
-func TestDiffTracker_AddLine(t *testing.T) {
+func TestDiffTracker_AddedLine(t *testing.T) {
 	tracker := NewDiffTracker()
 	tracker.SetOriginal("line1\nline2")
 
-	// Simulate adding a line at position 2 (cursor at line 2)
-	tracker.UpdateContent("line1\nline2\nline3", 2)
-
+	// Add a line at the end
 	states := tracker.ComputeLineStates("line1\nline2\nline3")
 
 	if len(states) != 3 {
@@ -74,13 +71,11 @@ func TestDiffTracker_AddLine(t *testing.T) {
 	}
 }
 
-func TestDiffTracker_ModifyLine(t *testing.T) {
+func TestDiffTracker_ModifiedLine(t *testing.T) {
 	tracker := NewDiffTracker()
 	tracker.SetOriginal("line1\noriginal\nline3")
 
-	// Simulate modifying line at position 1 (cursor at line 1)
-	tracker.UpdateContent("line1\nmodified\nline3", 1)
-
+	// Modify the middle line
 	states := tracker.ComputeLineStates("line1\nmodified\nline3")
 
 	if len(states) != 3 {
@@ -97,56 +92,11 @@ func TestDiffTracker_ModifyLine(t *testing.T) {
 	}
 }
 
-func TestDiffTracker_DeleteLine(t *testing.T) {
+func TestDiffTracker_InsertedLine(t *testing.T) {
 	tracker := NewDiffTracker()
-	tracker.SetOriginal("line1\nline2\nline3")
+	tracker.SetOriginal("line1\nline3")
 
-	// Simulate deleting line at position 1 (cursor at line 1)
-	tracker.UpdateContent("line1\nline3", 1)
-
-	states, deletedAt := tracker.ComputeLineStatesWithDeletions("line1\nline3")
-
-	if len(states) != 2 {
-		t.Fatalf("Expected 2 states, got %d", len(states))
-	}
-	if states[0] != LineUnchanged {
-		t.Errorf("line 0 should be unchanged, got %v", states[0])
-	}
-
-	// Position 1 should have a deletion marker
-	if !deletedAt[1] {
-		t.Error("Expected deletion marker at position 1")
-	}
-}
-
-func TestDiffTracker_AddThenDelete(t *testing.T) {
-	tracker := NewDiffTracker()
-	tracker.SetOriginal("line1\nline2")
-
-	// First add a line at position 2
-	tracker.UpdateContent("line1\nline2\nline3", 2)
-
-	// Then delete that line
-	tracker.UpdateContent("line1\nline2", 2)
-
-	states := tracker.ComputeLineStates("line1\nline2")
-
-	if len(states) != 2 {
-		t.Fatalf("Expected 2 states, got %d", len(states))
-	}
-	// After adding then deleting, we should have a deletion marker
-	// and no more added marker
-}
-
-func TestDiffTracker_MultipleAdds(t *testing.T) {
-	tracker := NewDiffTracker()
-	tracker.SetOriginal("line1")
-
-	// Add line at position 1
-	tracker.UpdateContent("line1\nline2", 1)
-	// Add another line at position 2
-	tracker.UpdateContent("line1\nline2\nline3", 2)
-
+	// Insert a line in the middle
 	states := tracker.ComputeLineStates("line1\nline2\nline3")
 
 	if len(states) != 3 {
@@ -158,8 +108,38 @@ func TestDiffTracker_MultipleAdds(t *testing.T) {
 	if states[1] != LineAdded {
 		t.Errorf("line 1 should be added, got %v", states[1])
 	}
-	if states[2] != LineAdded {
-		t.Errorf("line 2 should be added, got %v", states[2])
+	if states[2] != LineUnchanged {
+		t.Errorf("line 2 should be unchanged, got %v", states[2])
+	}
+}
+
+func TestDiffTracker_DeletedLine(t *testing.T) {
+	tracker := NewDiffTracker()
+	tracker.SetOriginal("line1\nline2\nline3")
+
+	// Delete the middle line
+	states, deletedAt := tracker.ComputeLineStatesWithDeletions("line1\nline3")
+
+	if len(states) != 2 {
+		t.Fatalf("Expected 2 states, got %d", len(states))
+	}
+	if states[0] != LineUnchanged {
+		t.Errorf("line 0 should be unchanged, got %v", states[0])
+	}
+	if states[1] != LineUnchanged {
+		t.Errorf("line 1 should be unchanged, got %v", states[1])
+	}
+
+	// Check for deletion marker
+	hasDeleted := false
+	for _, d := range deletedAt {
+		if d {
+			hasDeleted = true
+			break
+		}
+	}
+	if !hasDeleted {
+		t.Error("Expected a deletion marker somewhere")
 	}
 }
 
@@ -196,6 +176,49 @@ func TestSplitLines(t *testing.T) {
 			result := splitLines(tt.content)
 			if len(result) != tt.expected {
 				t.Errorf("splitLines(%q) returned %d lines, want %d", tt.content, len(result), tt.expected)
+			}
+		})
+	}
+}
+
+func TestComputeLCS(t *testing.T) {
+	tests := []struct {
+		name     string
+		a        []string
+		b        []string
+		expected int
+	}{
+		{
+			name:     "identical",
+			a:        []string{"a", "b", "c"},
+			b:        []string{"a", "b", "c"},
+			expected: 3,
+		},
+		{
+			name:     "one added",
+			a:        []string{"a", "c"},
+			b:        []string{"a", "b", "c"},
+			expected: 2,
+		},
+		{
+			name:     "one removed",
+			a:        []string{"a", "b", "c"},
+			b:        []string{"a", "c"},
+			expected: 2,
+		},
+		{
+			name:     "empty",
+			a:        []string{},
+			b:        []string{"a"},
+			expected: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := computeLCS(tt.a, tt.b)
+			if len(result) != tt.expected {
+				t.Errorf("computeLCS() returned %d items, want %d", len(result), tt.expected)
 			}
 		})
 	}
