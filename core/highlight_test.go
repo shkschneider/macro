@@ -239,8 +239,8 @@ func TestNewSimpleLexer(t *testing.T) {
 		Rules: map[string][]PatternRule{
 			"root": {
 				{Pattern: `\b(keyword1|keyword2)\b`, TokenType: chroma.Keyword},
-				{Pattern: `"[^"]*"`, TokenType: chroma.String},
-				{Pattern: `//.*`, TokenType: chroma.Comment},
+				{Pattern: `"(?:[^"\\]|\\.)*"`, TokenType: chroma.String},
+				{Pattern: `//[^\n]*`, TokenType: chroma.Comment},
 				{Pattern: `\d+`, TokenType: chroma.Number},
 			},
 		},
