@@ -15,6 +15,15 @@ const (
 	LineDeleted
 )
 
+// DiffResult contains both per-line states and inter-line deletion markers.
+type DiffResult struct {
+	// LineStates contains the state for each current line (Added, Modified, Unchanged)
+	LineStates []LineState
+	// DeletionsAbove[i] is true if there are deleted lines above current line i
+	// DeletionsAbove[len(lines)] is true if there are deleted lines at the end
+	DeletionsAbove []bool
+}
+
 // DiffTracker tracks changes between original and current content.
 type DiffTracker struct {
 	originalLines []string
@@ -49,6 +58,12 @@ func (d *DiffTracker) HasOriginal() bool {
 // ComputeLineStates computes the state of each line in the current content
 // compared to the original content using a simple line-by-line diff algorithm.
 func (d *DiffTracker) ComputeLineStates(currentContent string) []LineState {
+	result := d.ComputeDiff(currentContent)
+	return result.LineStates
+}
+
+// ComputeDiff computes both line states and deletion markers.
+func (d *DiffTracker) ComputeDiff(currentContent string) DiffResult {
 	currentLines := splitLines(currentContent)
 
 	// If no original content, all lines are considered "added" (new file)
@@ -57,7 +72,10 @@ func (d *DiffTracker) ComputeLineStates(currentContent string) []LineState {
 		for i := range states {
 			states[i] = LineAdded
 		}
-		return states
+		return DiffResult{
+			LineStates:     states,
+			DeletionsAbove: make([]bool, len(currentLines)+1),
+		}
 	}
 
 	// Use LCS-based diff algorithm
@@ -86,7 +104,7 @@ func splitLines(content string) []string {
 }
 
 // computeDiffStates uses a simplified LCS-based algorithm to compute line states.
-func computeDiffStates(original, current []string) []LineState {
+func computeDiffStates(original, current []string) DiffResult {
 	// Build a map of original lines to their indices for quick lookup
 	originalMap := make(map[string][]int)
 	for i, line := range original {
@@ -94,6 +112,7 @@ func computeDiffStates(original, current []string) []LineState {
 	}
 
 	states := make([]LineState, len(current))
+	deletionsAbove := make([]bool, len(current)+1)
 
 	// Track which original lines have been "matched"
 	matchedOriginal := make([]bool, len(original))
@@ -145,5 +164,35 @@ func computeDiffStates(original, current []string) []LineState {
 		}
 	}
 
-	return states
+	// Third pass: Track deletions - find unmatched original lines
+	// For each unmatched original line, mark deletion above the corresponding current position
+	for i, matched := range matchedOriginal {
+		if !matched {
+			// This original line was deleted
+			// Find where it would appear in the current content
+			// (above the next matched line, or at the end)
+			insertPos := len(current) // default to end
+			for j := i + 1; j < len(original); j++ {
+				if matchedOriginal[j] {
+					// Find this matched line's position in current
+					for k, currLine := range current {
+						if currLine == original[j] && states[k] == LineUnchanged {
+							insertPos = k
+							break
+						}
+					}
+					break
+				}
+			}
+			// Mark deletion above this position
+			if insertPos <= len(current) {
+				deletionsAbove[insertPos] = true
+			}
+		}
+	}
+
+	return DiffResult{
+		LineStates:     states,
+		DeletionsAbove: deletionsAbove,
+	}
 }
