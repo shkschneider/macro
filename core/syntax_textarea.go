@@ -206,27 +206,18 @@ func (s *SyntaxTextarea) View() string {
 func (s *SyntaxTextarea) insertCursor(plainLine, highlightedLine string, col int) string {
 	// Get the character at cursor position or space if at end
 	plainRunes := []rune(plainLine)
-	var cursorChar string
-	if col < len(plainRunes) {
-		cursorChar = string(plainRunes[col])
-	} else {
-		cursorChar = " "
-	}
 
-	// Style the cursor character with reverse video using raw ANSI codes
-	// to avoid any lipgloss rendering issues
-	styledCursor := "\x1b[7m" + cursorChar + "\x1b[27m"
-
-	// If cursor is at or past end of line, append cursor
+	// If cursor is at or past end of line, append a reverse-video space
 	if col >= len(plainRunes) {
-		return highlightedLine + styledCursor
+		return highlightedLine + "\x1b[7m \x1b[27m"
 	}
 
 	// We need to find the position in the highlighted string where the visible
-	// character at 'col' starts. ANSI escape codes don't count as visible characters.
+	// character at 'col' starts, and extract the styled character with its ANSI codes.
 	highlightedRunes := []rune(highlightedLine)
 	visibleCol := 0
-	insertPos := -1
+	charStartPos := -1
+	charEndPos := -1
 	inEscape := false
 
 	for i := 0; i < len(highlightedRunes); i++ {
@@ -246,26 +237,30 @@ func (s *SyntaxTextarea) insertCursor(plainLine, highlightedLine string, col int
 
 		// This is a visible character
 		if visibleCol == col {
-			insertPos = i
+			charStartPos = i
+			charEndPos = i + 1
 			break
 		}
 		visibleCol++
 	}
 
 	// If we didn't find the position, append cursor at end
-	if insertPos == -1 {
-		return highlightedLine + styledCursor
+	if charStartPos == -1 {
+		return highlightedLine + "\x1b[7m \x1b[27m"
 	}
 
-	// Build result: before cursor + reset + styled cursor + rest of line
-	before := string(highlightedRunes[:insertPos])
+	// Build result: before cursor char + reverse video on + char + reverse video off + rest of line
+	// This preserves the color that was set before the character
+	before := string(highlightedRunes[:charStartPos])
+	cursorChar := string(highlightedRunes[charStartPos:charEndPos])
 	after := ""
-	if insertPos+1 < len(highlightedRunes) {
-		after = string(highlightedRunes[insertPos+1:])
+	if charEndPos < len(highlightedRunes) {
+		after = string(highlightedRunes[charEndPos:])
 	}
 
-	// Reset styling before cursor, show cursor, then continue with the rest
-	return before + "\x1b[0m" + styledCursor + after
+	// Use \x1b[7m to turn ON reverse video, \x1b[27m to turn it OFF
+	// This preserves any foreground/background colors that were set
+	return before + "\x1b[7m" + cursorChar + "\x1b[27m" + after
 }
 
 // intToStr converts an integer to string.
