@@ -54,6 +54,9 @@ func (m *model) loadBuffer(idx int) {
 		m.syntaxTA.SetFilename(buf.filePath)
 		m.syntaxTA.SetValue(buf.content)
 
+		// Set original content for diff tracking (shows colored indicators for changes)
+		m.syntaxTA.SetOriginalContent(buf.originalContent)
+
 		// Restore cursor position: first check buffer state, then fall back to cursor state
 		if buf.cursorLine > 0 || buf.cursorCol > 0 {
 			// Use buffer's cached cursor position
