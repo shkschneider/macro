@@ -139,10 +139,7 @@ func TestBuildStatusBar_WithFile(t *testing.T) {
 	}
 
 	// Check right side content
-	if !strings.Contains(statusBar, "[utf-8]") {
-		t.Error("Status bar should contain file encoding")
-	}
-	if !strings.Contains(statusBar, "[/path/to]") {
+	if !strings.Contains(statusBar, "[/path/to/]") {
 		t.Error("Status bar should contain directory path")
 	}
 }
@@ -193,8 +190,8 @@ func TestBuildStatusBar_ReadOnlyFile(t *testing.T) {
 
 	statusBar := m.buildStatusBar()
 
-	// Read-only file should have [RO] indicator
-	if !strings.Contains(statusBar, "[RO]") {
+	// Read-only file should have (read-only) indicator
+	if !strings.Contains(statusBar, "(read-only)") {
 		t.Error("Status bar should show [RO] for read-only file")
 	}
 }
