@@ -1,14 +1,25 @@
 package main
 
-import core "github.com/shkschneider/macro/core"
+import (
+	"path/filepath"
+
+	core "github.com/shkschneider/macro/core"
+)
 
 // Buffer represents an open file with its state
 type Buffer struct {
-	filePath   string
-	content    string
-	readOnly   bool
-	cursorLine int
-	cursorCol  int
+	filePath        string
+	content         string
+	originalContent string // Original content for detecting modifications
+	fileSize        int64 // File size in bytes for display
+	readOnly        bool
+	cursorLine      int
+	cursorCol       int
+}
+
+// IsModified returns true if the buffer content has been modified from the original
+func (b *Buffer) IsModified() bool {
+	return b.content != b.originalContent
 }
 
 // moveCursorToTop moves the syntaxTA cursor to position (0,0)
@@ -88,7 +99,7 @@ func (m *model) saveCurrentBufferState() {
 }
 
 // addBuffer adds a new buffer or switches to existing one if file already open
-func (m *model) addBuffer(filePath string, content string, readOnly bool) int {
+func (m *model) addBuffer(filePath string, content string, readOnly bool, fileSize int64) int {
 	// Check if buffer already exists
 	for i, buf := range m.buffers {
 		if buf.filePath == filePath {
@@ -98,11 +109,13 @@ func (m *model) addBuffer(filePath string, content string, readOnly bool) int {
 
 	// Create new buffer
 	buf := Buffer{
-		filePath:   filePath,
-		content:    content,
-		readOnly:   readOnly,
-		cursorLine: 0,
-		cursorCol:  0,
+		filePath:        filePath,
+		content:         content,
+		originalContent: content, // Store original for modification tracking
+		readOnly:        readOnly,
+		fileSize:        fileSize,
+		cursorLine:      0,
+		cursorCol:       0,
 	}
 	m.buffers = append(m.buffers, buf)
 	return len(m.buffers) - 1
@@ -122,4 +135,33 @@ func (m *model) isCurrentBufferReadOnly() bool {
 		return m.buffers[m.currentBuffer].readOnly
 	}
 	return false
+}
+
+// isCurrentBufferModified returns whether the current buffer has been modified
+func (m *model) isCurrentBufferModified() bool {
+	if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
+		buf := &m.buffers[m.currentBuffer]
+		// For editable buffers, check current textarea content against original
+		if !buf.readOnly {
+			return m.syntaxTA.Value() != buf.originalContent
+		}
+		return buf.IsModified()
+	}
+	return false
+}
+
+// getCurrentBuffer returns the current buffer, or nil if none is selected
+func (m *model) getCurrentBuffer() *Buffer {
+	if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
+		return &m.buffers[m.currentBuffer]
+	}
+	return nil
+}
+
+// getDirectoryPath returns the directory portion of the current file path
+func (m *model) getDirectoryPath() string {
+	if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
+		return filepath.Dir(m.buffers[m.currentBuffer].filePath)
+	}
+	return ""
 }
