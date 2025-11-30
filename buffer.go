@@ -50,23 +50,10 @@ func (m *model) loadBuffer(idx int) {
 			m.message = "WARNING: File is read-only. Editing disabled."
 		}
 	} else {
-		// Set filename for syntax highlighting, then set content
+		// Set filename for syntax highlighting and diff tracking
+		// SetFilename also sets up git diff tracking for git-tracked files
 		m.syntaxTA.SetFilename(buf.filePath)
 		m.syntaxTA.SetValue(buf.content)
-
-		// Set original content for diff tracking only for git-tracked files
-		// This shows colored indicators for changes compared to the git HEAD version
-		if core.IsGitTracked(buf.filePath) {
-			if gitContent, ok := core.GetGitFileContent(buf.filePath); ok {
-				m.syntaxTA.SetOriginalContent(gitContent)
-			} else {
-				// File is tracked but no HEAD content (new file staged)
-				m.syntaxTA.ClearOriginalContent()
-			}
-		} else {
-			// Untracked file - no diff indicators
-			m.syntaxTA.ClearOriginalContent()
-		}
 
 		// Restore cursor position: first check buffer state, then fall back to cursor state
 		if buf.cursorLine > 0 || buf.cursorCol > 0 {

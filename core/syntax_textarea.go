@@ -50,14 +50,17 @@ func NewSyntaxTextarea() *SyntaxTextarea {
 	}
 }
 
-// SetFilename sets the filename for language detection.
+// SetFilename sets the filename for language detection and diff tracking.
 func (s *SyntaxTextarea) SetFilename(filename string) {
 	s.filename = filename
 	s.language = DetectLanguage(filename)
+	// Also set file path for git diff tracking
+	s.diffTracker.SetFilePath(filename)
 }
 
 // SetOriginalContent stores the original file content for diff tracking.
 // Call this when loading a file to enable change indicators.
+// Note: This is now a no-op since we use git diff directly with the file path.
 func (s *SyntaxTextarea) SetOriginalContent(content string) {
 	s.diffTracker.SetOriginal(content)
 }
