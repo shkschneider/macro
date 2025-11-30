@@ -1,5 +1,7 @@
 package main
 
+import core "github.com/shkschneider/macro/core"
+
 // Buffer represents an open file with its state
 type Buffer struct {
 	filePath string
@@ -7,15 +9,15 @@ type Buffer struct {
 	readOnly bool
 }
 
-// moveCursorToTop moves the textarea cursor to position (0,0)
+// moveCursorToTop moves the syntaxTA cursor to position (0,0)
 func (m *model) moveCursorToTop() {
-	m.textarea.CursorStart()
-	for m.textarea.Line() > 0 {
-		m.textarea.CursorUp()
+	m.syntaxTA.CursorStart()
+	for m.syntaxTA.Line() > 0 {
+		m.syntaxTA.CursorUp()
 	}
 }
 
-// loadBuffer loads a buffer's content into the UI (textarea or viewport)
+// loadBuffer loads a buffer's content into the UI (syntaxTA or viewport)
 func (m *model) loadBuffer(idx int) {
 	if idx < 0 || idx >= len(m.buffers) {
 		return
@@ -24,13 +26,27 @@ func (m *model) loadBuffer(idx int) {
 	buf := m.buffers[idx]
 
 	if buf.readOnly {
-		m.viewport.SetContent(buf.content)
+		// Apply syntax highlighting for read-only files in viewport
+		highlightedContent := core.HighlightCode(buf.content, buf.filePath, "")
+		m.viewport.SetContent(highlightedContent)
 		m.viewport.GotoTop()
-		m.message = "WARNING: File is read-only. Editing disabled."
+		lang := core.DetectLanguage(buf.filePath)
+		if lang != "" {
+			m.message = "WARNING: File is read-only. Editing disabled. [" + lang + "]"
+		} else {
+			m.message = "WARNING: File is read-only. Editing disabled."
+		}
 	} else {
-		m.textarea.SetValue(buf.content)
+		// Set filename for syntax highlighting, then set content
+		m.syntaxTA.SetFilename(buf.filePath)
+		m.syntaxTA.SetValue(buf.content)
 		m.moveCursorToTop()
-		m.message = defaultMessage
+		lang := core.DetectLanguage(buf.filePath)
+		if lang != "" {
+			m.message = defaultMessage + " [" + lang + "]"
+		} else {
+			m.message = defaultMessage
+		}
 	}
 	m.currentBuffer = idx
 }
@@ -43,7 +59,7 @@ func (m *model) saveCurrentBufferState() {
 
 	buf := &m.buffers[m.currentBuffer]
 	if !buf.readOnly {
-		buf.content = m.textarea.Value()
+		buf.content = m.syntaxTA.Value()
 	}
 }
 

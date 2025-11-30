@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -8,7 +9,38 @@ import (
 	feature "github.com/shkschneider/macro/feature"
 )
 
+// ReadOnlyMode defines the mode for read-only handling
+type ReadOnlyMode int
+
+const (
+	// ReadOnlyAuto - detect from file permissions (default)
+	ReadOnlyAuto ReadOnlyMode = iota
+	// ReadOnlyForced - force read-only mode
+	ReadOnlyForced
+	// ReadWriteForced - force read-write mode (if file is writable)
+	ReadWriteForced
+)
+
+// Global read-only mode setting
+var globalReadOnlyMode = ReadOnlyAuto
+
 func main() {
+	// Parse command line flags
+	forceRO := flag.Bool("ro", false, "Force read-only mode")
+	forceRW := flag.Bool("rw", false, "Force read-write mode (if file is writable)")
+	flag.Parse()
+
+	// Determine read-only mode
+	if *forceRO && *forceRW {
+		fmt.Println("Error: Cannot use both -ro and -rw flags")
+		os.Exit(1)
+	}
+	if *forceRO {
+		globalReadOnlyMode = ReadOnlyForced
+	} else if *forceRW {
+		globalReadOnlyMode = ReadWriteForced
+	}
+
 	// Register feature commands
 	registerCommand(Command{
 		Name:        feature.FileSwitcherCommand().Name,
@@ -41,10 +73,11 @@ func main() {
 		Execute:     executeQuit,
 	})
 
-	// Get filename from command line args
+	// Get filename from remaining command line args
+	args := flag.Args()
 	filePath := ""
-	if len(os.Args) > 1 {
-		filePath = os.Args[1]
+	if len(args) > 0 {
+		filePath = args[0]
 	}
 
 	p := tea.NewProgram(initialModel(filePath), tea.WithAltScreen())

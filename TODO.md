@@ -4,7 +4,7 @@
 [x] split implementation / architecture
 [x] load file or directory
 [~] status line
-[ ] syntax highligthing
+[x] syntax highligthing
 [~] dialogs
 [~] load multiple files
 [~] more keybindings

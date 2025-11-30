@@ -15,6 +15,13 @@ A nano-like simple CLI text editor built with [Bubbletea](https://github.com/cha
   - Lists all files in the current file's directory
   - Use arrow keys to navigate, Enter to open
   - Esc or Ctrl-Space to close
+- **Syntax highlighting** powered by [Chroma](https://github.com/alecthomas/chroma)
+  - Real-time syntax highlighting while editing (read-write mode)
+  - Syntax highlighting in viewport (read-only mode)
+  - Automatic language detection based on file extension
+  - 300+ supported languages out of the box
+  - Multiple color themes available (default: Monokai)
+  - Runtime registration of custom lexers for new languages
 - Clean, modern UI with syntax highlighting for status messages
 
 ## Installation
@@ -29,10 +36,23 @@ go build -o macro
 # Create or edit a new file
 ./macro filename.txt
 
+# Force read-only mode (syntax highlighting in viewport)
+./macro -ro filename.txt
+
+# Force read-write mode (if file permissions allow)
+./macro -rw filename.txt
+
 # The editor will open in your terminal
 # Use Ctrl-S to save changes
 # Use Ctrl-Q to quit
 ```
+
+### CLI Options
+
+| Flag | Description |
+|------|-------------|
+| `-ro` | Force read-only mode (uses viewport with syntax highlighting) |
+| `-rw` | Force read-write mode (uses textarea for editing, if file is writable) |
 
 ## Requirements
 
@@ -147,3 +167,75 @@ This architecture ensures:
 - **Testability**: Pure functions are easy to test
 - **Maintainability**: Clear separation of concerns
 - **Extensibility**: Easy to add new features via new message types
+
+## Syntax Highlighting
+
+Macro uses [Chroma](https://github.com/alecthomas/chroma), a general purpose syntax highlighter in pure Go, to provide syntax highlighting capabilities.
+
+### Supported Languages
+
+Over 300 programming and markup languages are supported out of the box, including:
+- Go, Python, JavaScript, TypeScript, Java, C, C++, Rust
+- HTML, CSS, JSON, YAML, XML, Markdown
+- SQL, Shell/Bash, PowerShell
+- And many more...
+
+Language detection is automatic based on file extension.
+
+### Color Themes
+
+Multiple color themes are available. The default theme is Monokai. Other popular themes include:
+- Dracula
+- GitHub
+- Solarized (Dark/Light)
+- Nord
+- Gruvbox
+
+### Adding Custom Languages at Runtime
+
+You can register custom lexers for new languages at runtime using the `core.RegisterLexer` function. Here's an example:
+
+```go
+import (
+    "github.com/alecthomas/chroma/v2"
+    "github.com/shkschneider/macro/core"
+)
+
+// Define a custom lexer configuration
+config := &core.LexerConfig{
+    Name:      "MyLanguage",
+    Aliases:   []string{"mylang", "ml"},
+    Filenames: []string{"*.ml", "*.mylang"},
+    MimeTypes: []string{"text/x-mylang"},
+    Rules: map[string][]core.PatternRule{
+        "root": {
+            {Pattern: `\b(func|var|return)\b`, TokenType: chroma.Keyword},
+            {Pattern: `"[^"]*"`, TokenType: chroma.String},
+            {Pattern: `//.*`, TokenType: chroma.Comment},
+            {Pattern: `\d+`, TokenType: chroma.Number},
+        },
+    },
+}
+
+// Create and register the lexer
+lexer, err := core.NewSimpleLexer(config)
+if err != nil {
+    log.Fatal(err)
+}
+core.RegisterLexer(lexer)
+```
+
+After registration, files matching the specified patterns will be highlighted using your custom rules.
+
+### API Reference
+
+The `core` package provides the following syntax highlighting functions:
+
+- `HighlightCode(code, filename, language string) string` - Highlight code with ANSI colors
+- `HighlightCodeLines(code, filename, language string) []string` - Highlight and return as lines
+- `DetectLanguage(filename string) string` - Detect language from filename
+- `GetLanguageByExtension(ext string) string` - Get language for extension
+- `ListLanguages() []string` - List all available languages
+- `ListStyles() []string` - List all available color themes
+- `RegisterLexer(lexer chroma.Lexer) error` - Register a custom lexer
+- `NewSimpleLexer(config *LexerConfig) (chroma.Lexer, error)` - Create a simple lexer from config

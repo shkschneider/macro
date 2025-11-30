@@ -8,7 +8,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -56,7 +55,7 @@ var DefaultKeyMap = KeyMap{
 }
 
 type model struct {
-	textarea      textarea.Model
+	syntaxTA      *core.SyntaxTextarea
 	viewport      viewport.Model
 	filepicker    filepicker.Model
 	buffers       []Buffer // All open buffers
@@ -68,10 +67,8 @@ type model struct {
 }
 
 func initialModel(filePath string) model {
-	ta := textarea.New()
-	ta.Focus()
-	ta.Prompt = ""            // Remove default border on the left
-	ta.ShowLineNumbers = true // Enable line numbers for better navigation
+	sta := core.NewSyntaxTextarea()
+	sta.Focus()
 
 	fp := filepicker.New()
 	fp.DirAllowed = false
@@ -80,7 +77,7 @@ func initialModel(filePath string) model {
 	vp := viewport.New(80, 24)
 
 	m := model{
-		textarea:      ta,
+		syntaxTA:      sta,
 		viewport:      vp,
 		filepicker:    fp,
 		buffers:       []Buffer{},
@@ -111,8 +108,8 @@ func initialModel(filePath string) model {
 				m.err = err
 				return m
 			}
-			// Check if file is read-only
-			readOnly := info.Mode()&0200 == 0
+			// Check if file is read-only based on permissions and CLI flags
+			readOnly := determineReadOnly(info)
 
 			// Create initial buffer
 			buf := Buffer{
@@ -134,7 +131,7 @@ func (m model) Init() tea.Cmd {
 	if m.showPicker {
 		return m.filepicker.Init()
 	}
-	return textarea.Blink
+	return m.syntaxTA.Focus()
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -165,7 +162,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				info, statErr := os.Stat(path)
 				readOnly := false
 				if statErr == nil {
-					readOnly = info.Mode()&0200 == 0
+					readOnly = determineReadOnly(info)
 				}
 
 				bufferIdx := m.addBuffer(path, string(content), readOnly)
@@ -183,14 +180,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if contentHeight < 1 {
 					contentHeight = 1
 				}
-				m.textarea.SetWidth(termWidth)
-				m.textarea.SetHeight(contentHeight)
+				m.syntaxTA.SetWidth(termWidth)
+				m.syntaxTA.SetHeight(contentHeight)
 				m.viewport.Width = termWidth
 				m.viewport.Height = contentHeight
 			}
 
-			m.textarea.Focus()
-			return m, textarea.Blink
+			m.syntaxTA.Focus()
+			return m, m.syntaxTA.Focus()
 		}
 
 		return m, cmd
@@ -219,7 +216,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			info, statErr := os.Stat(msg.Path)
 			readOnly := false
 			if statErr == nil {
-				readOnly = info.Mode()&0200 == 0
+				readOnly = determineReadOnly(info)
 			}
 
 			bufferIdx := m.addBuffer(msg.Path, string(content), readOnly)
@@ -286,8 +283,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			contentHeight = 1
 		}
 
-		m.textarea.SetWidth(msg.Width)
-		m.textarea.SetHeight(contentHeight)
+		m.syntaxTA.SetWidth(msg.Width)
+		m.syntaxTA.SetHeight(contentHeight)
 		m.viewport.Width = msg.Width
 		m.viewport.Height = contentHeight
 
@@ -302,7 +299,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if readOnly && m.err == nil {
 		m.viewport, cmd = m.viewport.Update(msg)
 	} else if !readOnly && m.err == nil {
-		m.textarea, cmd = m.textarea.Update(msg)
+		m.syntaxTA, cmd = m.syntaxTA.Update(msg)
 	}
 	return m, cmd
 }
@@ -316,13 +313,13 @@ func (m model) View() string {
 			core.MessageStyle.Render("↑/↓: Navigate | Enter: Select | Ctrl-Q: Quit"))
 	}
 
-	// Content area - use viewport for read-only, textarea for writable
+	// Content area - use viewport for read-only, syntaxTA for writable (with highlighting)
 	var contentView string
 	readOnly := m.isCurrentBufferReadOnly()
 	if readOnly && m.err == nil {
 		contentView = m.viewport.View()
 	} else {
-		contentView = m.textarea.View()
+		contentView = m.syntaxTA.View()
 	}
 
 	// Build status bar with file info
@@ -382,7 +379,7 @@ func executeFileSave(m *model) tea.Cmd {
 	} else {
 		// Save current buffer state first
 		m.saveCurrentBufferState()
-		err := os.WriteFile(filePath, []byte(m.textarea.Value()), 0644)
+		err := os.WriteFile(filePath, []byte(m.syntaxTA.Value()), 0644)
 		if err != nil {
 			m.message = fmt.Sprintf("Error saving: %v", err)
 			m.err = err
@@ -440,4 +437,20 @@ func executeCommandPalette(m *model) tea.Cmd {
 	}
 	m.activeDialog = feature.NewHelpDialog(commands)
 	return m.activeDialog.Init()
+}
+
+// determineReadOnly determines the read-only state based on file info and CLI flags
+func determineReadOnly(info os.FileInfo) bool {
+	// Check file permissions
+	fileIsWritable := info.Mode()&0200 != 0
+
+	switch globalReadOnlyMode {
+	case ReadOnlyForced:
+		return true
+	case ReadWriteForced:
+		// Only allow read-write if file is actually writable
+		return !fileIsWritable
+	default: // ReadOnlyAuto
+		return !fileIsWritable
+	}
 }
