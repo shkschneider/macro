@@ -64,3 +64,13 @@ var (
 	DialogInstructionsStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("241"))
 )
+
+// Diff indicator styles for showing line changes
+var (
+	// DiffAddedStyle is used for added lines (green)
+	DiffAddedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
+	// DiffDeletedStyle is used for deleted lines (red)
+	DiffDeletedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+	// DiffModifiedStyle is used for modified lines (yellow)
+	DiffModifiedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
+)

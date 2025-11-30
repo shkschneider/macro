@@ -22,6 +22,9 @@ type SyntaxTextarea struct {
 	lineNumberStyle lipgloss.Style
 	// Style for cursor line highlight
 	cursorLineStyle lipgloss.Style
+
+	// Diff tracking for showing changes
+	diffTracker *DiffTracker
 }
 
 // NewSyntaxTextarea creates a new syntax-highlighted textarea.
@@ -43,6 +46,7 @@ func NewSyntaxTextarea() *SyntaxTextarea {
 			Foreground(lipgloss.Color("241")),
 		cursorLineStyle: lipgloss.NewStyle().
 			Background(lipgloss.Color("236")),
+		diffTracker: NewDiffTracker(),
 	}
 }
 
@@ -50,6 +54,17 @@ func NewSyntaxTextarea() *SyntaxTextarea {
 func (s *SyntaxTextarea) SetFilename(filename string) {
 	s.filename = filename
 	s.language = DetectLanguage(filename)
+}
+
+// SetOriginalContent stores the original file content for diff tracking.
+// Call this when loading a file to enable change indicators.
+func (s *SyntaxTextarea) SetOriginalContent(content string) {
+	s.diffTracker.SetOriginal(content)
+}
+
+// ClearOriginalContent clears the original content (e.g., for new files).
+func (s *SyntaxTextarea) ClearOriginalContent() {
+	s.diffTracker.ClearOriginal()
 }
 
 // SetLanguage explicitly sets the language for highlighting.
@@ -70,7 +85,7 @@ func (s *SyntaxTextarea) Value() string {
 // SetWidth sets the width.
 func (s *SyntaxTextarea) SetWidth(w int) {
 	s.width = w
-	// Account for line numbers (5 chars + 1 margin)
+	// Account for line numbers (4 chars) + diff indicator (1 char) + space (1 char) = 6 chars
 	s.textarea.SetWidth(w - 6)
 }
 
@@ -174,6 +189,9 @@ func (s *SyntaxTextarea) View() string {
 	highlightedContent := HighlightCode(content, s.filename, s.language)
 	highlightedLines := strings.Split(highlightedContent, "\n")
 
+	// Compute diff states for change indicators
+	diffStates := s.diffTracker.ComputeLineStates(content)
+
 	// Get cursor position from textarea
 	cursorLine := s.textarea.Line()
 	lineInfo := s.textarea.LineInfo()
@@ -209,13 +227,16 @@ func (s *SyntaxTextarea) View() string {
 
 	var result strings.Builder
 	for i := startLine; i < endLine; i++ {
-		// Line number with manual padding (right-aligned in 4 chars + space)
+		// Line number with manual padding (right-aligned in 4 chars)
 		numStr := intToStr(i + 1)
 		padding := ""
 		if len(numStr) < 4 {
 			padding = strings.Repeat(" ", 4-len(numStr))
 		}
-		lineNum := s.lineNumberStyle.Render(padding + numStr) + " "
+		lineNum := s.lineNumberStyle.Render(padding + numStr)
+
+		// Get diff indicator for this line
+		diffIndicator := s.getDiffIndicator(i, diffStates)
 
 		// Get the highlighted line content
 		var lineContent string
@@ -231,6 +252,8 @@ func (s *SyntaxTextarea) View() string {
 		}
 
 		result.WriteString(lineNum)
+		result.WriteString(diffIndicator)
+		result.WriteString(" ")
 		result.WriteString(lineContent)
 
 		if i < endLine-1 {
@@ -243,11 +266,31 @@ func (s *SyntaxTextarea) View() string {
 		if i > 0 {
 			result.WriteString("\n")
 		}
-		lineNum := s.lineNumberStyle.Render("   ~") + " "
+		lineNum := s.lineNumberStyle.Render("   ~")
 		result.WriteString(lineNum)
+		result.WriteString(" ") // Space for diff indicator column
+		result.WriteString(" ")
 	}
 
 	return result.String()
+}
+
+// getDiffIndicator returns a colored "|" indicator based on the line's diff state.
+func (s *SyntaxTextarea) getDiffIndicator(lineIdx int, diffStates []LineState) string {
+	if lineIdx >= len(diffStates) {
+		return " " // No diff info, return space
+	}
+
+	switch diffStates[lineIdx] {
+	case LineAdded:
+		return DiffAddedStyle.Render("|")
+	case LineModified:
+		return DiffModifiedStyle.Render("|")
+	case LineDeleted:
+		return DiffDeletedStyle.Render("|")
+	default:
+		return " " // Unchanged or unknown, just a space
+	}
 }
 
 // insertCursor inserts a visible cursor at the specified column position.
