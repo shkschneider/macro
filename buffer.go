@@ -4,9 +4,11 @@ import core "github.com/shkschneider/macro/core"
 
 // Buffer represents an open file with its state
 type Buffer struct {
-	filePath string
-	content  string
-	readOnly bool
+	filePath   string
+	content    string
+	readOnly   bool
+	cursorLine int
+	cursorCol  int
 }
 
 // moveCursorToTop moves the syntaxTA cursor to position (0,0)
@@ -40,7 +42,22 @@ func (m *model) loadBuffer(idx int) {
 		// Set filename for syntax highlighting, then set content
 		m.syntaxTA.SetFilename(buf.filePath)
 		m.syntaxTA.SetValue(buf.content)
-		m.moveCursorToTop()
+
+		// Restore cursor position: first check buffer state, then fall back to cursor state
+		if buf.cursorLine > 0 || buf.cursorCol > 0 {
+			// Use buffer's cached cursor position
+			m.syntaxTA.SetCursorPosition(buf.cursorLine, buf.cursorCol)
+		} else if m.cursorState != nil {
+			// Try to restore from persistent storage
+			if pos, ok := m.cursorState.GetPosition(buf.filePath); ok {
+				m.syntaxTA.SetCursorPosition(pos.Line, pos.Column)
+			} else {
+				m.moveCursorToTop()
+			}
+		} else {
+			m.moveCursorToTop()
+		}
+
 		lang := core.DetectLanguage(buf.filePath)
 		if lang != "" {
 			m.message = defaultMessage + " [" + lang + "]"
@@ -60,6 +77,13 @@ func (m *model) saveCurrentBufferState() {
 	buf := &m.buffers[m.currentBuffer]
 	if !buf.readOnly {
 		buf.content = m.syntaxTA.Value()
+		buf.cursorLine = m.syntaxTA.Line()
+		buf.cursorCol = m.syntaxTA.Column()
+
+		// Persist to cursor state storage
+		if m.cursorState != nil {
+			m.cursorState.SetPosition(buf.filePath, buf.cursorLine, buf.cursorCol)
+		}
 	}
 }
 
@@ -74,9 +98,11 @@ func (m *model) addBuffer(filePath string, content string, readOnly bool) int {
 
 	// Create new buffer
 	buf := Buffer{
-		filePath: filePath,
-		content:  content,
-		readOnly: readOnly,
+		filePath:   filePath,
+		content:    content,
+		readOnly:   readOnly,
+		cursorLine: 0,
+		cursorCol:  0,
 	}
 	m.buffers = append(m.buffers, buf)
 	return len(m.buffers) - 1
