@@ -213,21 +213,20 @@ func (s *SyntaxTextarea) insertCursor(plainLine, highlightedLine string, col int
 		cursorChar = " "
 	}
 
-	// Style the cursor character with reverse video
-	cursorStyle := lipgloss.NewStyle().
-		Reverse(true)
-	styledCursor := cursorStyle.Render(cursorChar)
+	// Style the cursor character with reverse video using raw ANSI codes
+	// to avoid any lipgloss rendering issues
+	styledCursor := "\x1b[7m" + cursorChar + "\x1b[27m"
 
 	// If cursor is at or past end of line, append cursor
 	if col >= len(plainRunes) {
 		return highlightedLine + styledCursor
 	}
 
-	// We need to find the position in the highlighted string
-	// This is tricky because of ANSI codes. We'll rebuild the line.
+	// We need to find the position in the highlighted string where the visible
+	// character at 'col' starts. ANSI escape codes don't count as visible characters.
 	highlightedRunes := []rune(highlightedLine)
 	visibleCol := 0
-	insertPos := 0
+	insertPos := -1
 	inEscape := false
 
 	for i := 0; i < len(highlightedRunes); i++ {
@@ -236,10 +235,6 @@ func (s *SyntaxTextarea) insertCursor(plainLine, highlightedLine string, col int
 		// Track ANSI escape sequences
 		if r == '\x1b' {
 			inEscape = true
-			if visibleCol == col {
-				insertPos = i
-				break
-			}
 			continue
 		}
 		if inEscape {
@@ -249,6 +244,7 @@ func (s *SyntaxTextarea) insertCursor(plainLine, highlightedLine string, col int
 			continue
 		}
 
+		// This is a visible character
 		if visibleCol == col {
 			insertPos = i
 			break
@@ -256,26 +252,19 @@ func (s *SyntaxTextarea) insertCursor(plainLine, highlightedLine string, col int
 		visibleCol++
 	}
 
-	// Build result: before cursor + styled cursor + after cursor (skip original char)
+	// If we didn't find the position, append cursor at end
+	if insertPos == -1 {
+		return highlightedLine + styledCursor
+	}
+
+	// Build result: before cursor + reset + styled cursor + rest of line
 	before := string(highlightedRunes[:insertPos])
-
-	// Find end of the character we're replacing (skip ANSI codes after it)
-	skipTo := insertPos + 1
-	for skipTo < len(highlightedRunes) {
-		r := highlightedRunes[skipTo]
-		if r == '\x1b' {
-			// Keep ANSI codes that come after
-			break
-		}
-		break
-	}
-
 	after := ""
-	if skipTo < len(highlightedRunes) {
-		after = string(highlightedRunes[skipTo:])
+	if insertPos+1 < len(highlightedRunes) {
+		after = string(highlightedRunes[insertPos+1:])
 	}
 
-	// Reset any styling before cursor and continue after
+	// Reset styling before cursor, show cursor, then continue with the rest
 	return before + "\x1b[0m" + styledCursor + after
 }
 
