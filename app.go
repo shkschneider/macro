@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -55,7 +56,7 @@ var DefaultKeyMap = KeyMap{
 }
 
 type model struct {
-	editor        *core.HighlightedEditor
+	textarea      textarea.Model
 	viewport      viewport.Model
 	filepicker    filepicker.Model
 	buffers       []Buffer // All open buffers
@@ -67,8 +68,10 @@ type model struct {
 }
 
 func initialModel(filePath string) model {
-	editor := core.NewHighlightedEditor()
-	editor.Focus()
+	ta := textarea.New()
+	ta.Focus()
+	ta.Prompt = ""            // Remove default border on the left
+	ta.ShowLineNumbers = true // Enable line numbers for better navigation
 
 	fp := filepicker.New()
 	fp.DirAllowed = false
@@ -77,7 +80,7 @@ func initialModel(filePath string) model {
 	vp := viewport.New(80, 24)
 
 	m := model{
-		editor:        editor,
+		textarea:      ta,
 		viewport:      vp,
 		filepicker:    fp,
 		buffers:       []Buffer{},
@@ -131,7 +134,7 @@ func (m model) Init() tea.Cmd {
 	if m.showPicker {
 		return m.filepicker.Init()
 	}
-	return m.editor.Focus()
+	return textarea.Blink
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -180,14 +183,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if contentHeight < 1 {
 					contentHeight = 1
 				}
-				m.editor.SetWidth(termWidth)
-				m.editor.SetHeight(contentHeight)
+				m.textarea.SetWidth(termWidth)
+				m.textarea.SetHeight(contentHeight)
 				m.viewport.Width = termWidth
 				m.viewport.Height = contentHeight
 			}
 
-			m.editor.Focus()
-			return m, m.editor.Focus()
+			m.textarea.Focus()
+			return m, textarea.Blink
 		}
 
 		return m, cmd
@@ -283,8 +286,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			contentHeight = 1
 		}
 
-		m.editor.SetWidth(msg.Width)
-		m.editor.SetHeight(contentHeight)
+		m.textarea.SetWidth(msg.Width)
+		m.textarea.SetHeight(contentHeight)
 		m.viewport.Width = msg.Width
 		m.viewport.Height = contentHeight
 
@@ -299,7 +302,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if readOnly && m.err == nil {
 		m.viewport, cmd = m.viewport.Update(msg)
 	} else if !readOnly && m.err == nil {
-		cmd = m.editor.Update(msg)
+		m.textarea, cmd = m.textarea.Update(msg)
 	}
 	return m, cmd
 }
@@ -313,13 +316,13 @@ func (m model) View() string {
 			core.MessageStyle.Render("↑/↓: Navigate | Enter: Select | Ctrl-Q: Quit"))
 	}
 
-	// Content area - use viewport for read-only, editor with syntax highlighting for writable
+	// Content area - use viewport for read-only, textarea for writable
 	var contentView string
 	readOnly := m.isCurrentBufferReadOnly()
 	if readOnly && m.err == nil {
 		contentView = m.viewport.View()
 	} else {
-		contentView = m.editor.View()
+		contentView = m.textarea.View()
 	}
 
 	// Build status bar with file info
@@ -379,7 +382,7 @@ func executeFileSave(m *model) tea.Cmd {
 	} else {
 		// Save current buffer state first
 		m.saveCurrentBufferState()
-		err := os.WriteFile(filePath, []byte(m.editor.Value()), 0644)
+		err := os.WriteFile(filePath, []byte(m.textarea.Value()), 0644)
 		if err != nil {
 			m.message = fmt.Sprintf("Error saving: %v", err)
 			m.err = err

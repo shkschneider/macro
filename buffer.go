@@ -9,15 +9,15 @@ type Buffer struct {
 	readOnly bool
 }
 
-// moveCursorToTop moves the editor cursor to position (0,0)
+// moveCursorToTop moves the textarea cursor to position (0,0)
 func (m *model) moveCursorToTop() {
-	m.editor.CursorStart()
-	for m.editor.Line() > 0 {
-		m.editor.CursorUp()
+	m.textarea.CursorStart()
+	for m.textarea.Line() > 0 {
+		m.textarea.CursorUp()
 	}
 }
 
-// loadBuffer loads a buffer's content into the UI (editor or viewport)
+// loadBuffer loads a buffer's content into the UI (textarea or viewport)
 func (m *model) loadBuffer(idx int) {
 	if idx < 0 || idx >= len(m.buffers) {
 		return
@@ -37,9 +37,7 @@ func (m *model) loadBuffer(idx int) {
 			m.message = "WARNING: File is read-only. Editing disabled."
 		}
 	} else {
-		// Set filename for syntax highlighting, then set content
-		m.editor.SetFilename(buf.filePath)
-		m.editor.SetValue(buf.content)
+		m.textarea.SetValue(buf.content)
 		m.moveCursorToTop()
 		lang := core.DetectLanguage(buf.filePath)
 		if lang != "" {
@@ -59,7 +57,7 @@ func (m *model) saveCurrentBufferState() {
 
 	buf := &m.buffers[m.currentBuffer]
 	if !buf.readOnly {
-		buf.content = m.editor.Value()
+		buf.content = m.textarea.Value()
 	}
 }
 

@@ -1,9 +1,0 @@
-fun main() {
-  for (n in 99 downTo 1) {
-    println("$n bottle${if (n==1) "" else "s"} of beer on the wall, $n bottle${if (n==1) "" else "s"} of beer.")
-    if (n-1 > 0) println("Take one down and pass it around, ${n-1} bottle${if (n-1==1) "" else "s"} of beer on the wall.\n")
-    else println("Take one down and pass it around, no more bottles of beer on the wall.\n")
-  }
-  println("No more bottles of beer on the wall, no more bottles of beer.")
-  println("Go to the store and buy some more, 99 bottles of beer on the wall.")
-}
