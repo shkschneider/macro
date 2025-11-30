@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	defaultMessage = "Macro v0.10.0 | Hit Ctrl-Space for Command Palette."
+	defaultMessage = "Macro v0.11.0 | Hit Ctrl-Space for Command Palette."
 	termWidth      = 0 // Will be updated on WindowSizeMsg
 	termHeight     = 0 // Will be updated on WindowSizeMsg
 )
