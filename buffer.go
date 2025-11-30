@@ -165,3 +165,44 @@ func (m *model) getDirectoryPath() string {
 	}
 	return ""
 }
+
+// ===== EditorContext interface implementation =====
+// These methods implement core.EditorContext to allow features to interact with the editor
+
+// IsCurrentBufferReadOnly implements core.EditorContext
+func (m *model) IsCurrentBufferReadOnly() bool {
+	return m.isCurrentBufferReadOnly()
+}
+
+// GetCurrentFilePath implements core.EditorContext
+func (m *model) GetCurrentFilePath() string {
+	return m.getCurrentFilePath()
+}
+
+// GetCurrentContent implements core.EditorContext
+func (m *model) GetCurrentContent() string {
+	return m.syntaxTA.Value()
+}
+
+// SaveCurrentBufferState implements core.EditorContext
+func (m *model) SaveCurrentBufferState() {
+	m.saveCurrentBufferState()
+}
+
+// UpdateBufferAfterSave implements core.EditorContext
+func (m *model) UpdateBufferAfterSave(content string, fileSize int64) {
+	if buf := m.getCurrentBuffer(); buf != nil {
+		buf.originalContent = content
+		buf.fileSize = fileSize
+	}
+}
+
+// SetMessage implements core.EditorContext
+func (m *model) SetMessage(msg string) {
+	m.message = msg
+}
+
+// SetError implements core.EditorContext
+func (m *model) SetError(err error) {
+	m.err = err
+}
