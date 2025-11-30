@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/dustin/go-humanize"
 	core "github.com/shkschneider/macro/core"
 	feature "github.com/shkschneider/macro/feature"
 )
@@ -113,11 +114,14 @@ func initialModel(filePath string) model {
 			// Check if file is read-only based on permissions and CLI flags
 			readOnly := determineReadOnly(info)
 
-			// Create initial buffer
+			// Create initial buffer with file size and original content tracking
+			contentStr := string(content)
 			buf := Buffer{
-				filePath: filePath,
-				content:  string(content),
-				readOnly: readOnly,
+				filePath:        filePath,
+				content:         contentStr,
+				originalContent: contentStr,
+				readOnly:        readOnly,
+				fileSize:        info.Size(),
 			}
 			m.buffers = append(m.buffers, buf)
 			m.currentBuffer = 0
@@ -168,11 +172,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err == nil {
 				info, statErr := os.Stat(path)
 				readOnly := false
+				var fileSize int64
 				if statErr == nil {
 					readOnly = determineReadOnly(info)
+					fileSize = info.Size()
 				}
 
-				bufferIdx := m.addBuffer(path, string(content), readOnly)
+				bufferIdx := m.addBuffer(path, string(content), readOnly, fileSize)
 				m.loadBuffer(bufferIdx)
 				m.message = defaultMessage
 				m.err = nil
@@ -224,11 +230,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if err == nil {
 			info, statErr := os.Stat(msg.Path)
 			readOnly := false
+			var fileSize int64
 			if statErr == nil {
 				readOnly = determineReadOnly(info)
+				fileSize = info.Size()
 			}
 
-			bufferIdx := m.addBuffer(msg.Path, string(content), readOnly)
+			bufferIdx := m.addBuffer(msg.Path, string(content), readOnly, fileSize)
 			m.loadBuffer(bufferIdx)
 			m.message = fmt.Sprintf("Opened %s", filepath.Base(msg.Path))
 			m.err = nil
@@ -339,19 +347,7 @@ func (m model) View() string {
 	}
 
 	// Build status bar with file info
-	statusInfo := ""
-	filePath := m.getCurrentFilePath()
-	if filePath != "" {
-		statusInfo = filePath
-		if readOnly {
-			statusInfo += " [READ-ONLY]"
-		}
-	} else {
-		statusInfo = "New File"
-	}
-
-	// Apply width to fill the entire line with reverse video
-	statusBar := core.StatusBarStyle.Width(termWidth).Render(statusInfo)
+	statusBar := m.buildStatusBar()
 
 	// Message line for warnings/errors/info
 	var messageLine string
@@ -395,13 +391,22 @@ func executeFileSave(m *model) tea.Cmd {
 	} else {
 		// Save current buffer state first
 		m.saveCurrentBufferState()
-		err := os.WriteFile(filePath, []byte(m.syntaxTA.Value()), 0644)
+		content := m.syntaxTA.Value()
+		err := os.WriteFile(filePath, []byte(content), 0644)
 		if err != nil {
 			m.message = fmt.Sprintf("Error saving: %v", err)
 			m.err = err
 		} else {
 			m.message = fmt.Sprintf("Saved to %s", filePath)
 			m.err = nil
+			// Update original content and file size after successful save
+			if buf := m.getCurrentBuffer(); buf != nil {
+				buf.originalContent = content
+				// Update file size from the newly written file
+				if info, err := os.Stat(filePath); err == nil {
+					buf.fileSize = info.Size()
+				}
+			}
 		}
 	}
 	return nil
@@ -474,4 +479,74 @@ func determineReadOnly(info os.FileInfo) bool {
 	default: // ReadOnlyAuto
 		return !fileIsWritable
 	}
+}
+
+// buildStatusBar creates the formatted status bar with left and right sections
+// Left: "filename.ext* [language] | human filesize"
+// Right: "line:col [RO] [fileencoding] [directory/path]"
+func (m *model) buildStatusBar() string {
+	buf := m.getCurrentBuffer()
+	if buf == nil {
+		return core.StatusBarStyle.Width(termWidth).Render("New File")
+	}
+
+	// Get file info
+	fileName := filepath.Base(buf.filePath)
+	lang := core.DetectLanguage(buf.filePath)
+	dirPath := filepath.Dir(buf.filePath)
+	modified := m.isCurrentBufferModified()
+	readOnly := buf.readOnly
+
+	// Build left side: "filename.ext* [language] | human filesize"
+	leftParts := []string{}
+
+	// Filename with modification indicator
+	if modified {
+		leftParts = append(leftParts, fileName+"*")
+	} else {
+		leftParts = append(leftParts, fileName)
+	}
+
+	// Language
+	if lang != "" {
+		leftParts = append(leftParts, "["+lang+"]")
+	}
+
+	// File size
+	leftParts = append(leftParts, humanize.Bytes(uint64(buf.fileSize)))
+
+	if readOnly {
+		leftParts = append(leftParts, "(read-only)")
+	}
+
+	leftSection := strings.Join(leftParts, " ")
+
+	// Build right side: "line:col [RO] [fileencoding] [directory/path]"
+	rightParts := []string{}
+
+	// File encoding (assuming UTF-8 as default since we're reading text files)
+	// rightParts = append(rightParts, "[utf-8]")
+
+	// Cursor position (line:column)
+	line, col := m.syntaxTA.CursorPosition()
+	rightParts = append(rightParts, fmt.Sprintf("%d:%d", line, col))
+
+	// Directory path
+	rightParts = append(rightParts, "["+dirPath+"/]")
+
+	rightSection := strings.Join(rightParts, " ")
+
+	// Calculate padding needed to align right section
+	// Account for StatusBarStyle padding (1 on each side = 2 total)
+	padding := 2
+	contentWidth := termWidth - padding
+	leftLen := len(leftSection)
+	rightLen := len(rightSection)
+	spacesNeeded := contentWidth - leftLen - rightLen
+	if spacesNeeded < 1 {
+		spacesNeeded = 1
+	}
+
+	fullStatusContent := leftSection + strings.Repeat(" ", spacesNeeded) + rightSection
+	return core.StatusBarStyle.Width(termWidth).Render(fullStatusContent)
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -73,5 +74,153 @@ func TestKeyMap_AllBindingsHaveHelp(t *testing.T) {
 		if help.Desc == "" {
 			t.Errorf("%s binding should have help description", b.name)
 		}
+	}
+}
+
+func TestBuffer_IsModified(t *testing.T) {
+	// Test unmodified buffer
+	buf := Buffer{
+		filePath:        "/path/to/test.go",
+		content:         "original content",
+		originalContent: "original content",
+		readOnly:        false,
+		fileSize:        16,
+	}
+	if buf.IsModified() {
+		t.Error("Buffer should not be modified when content equals original")
+	}
+
+	// Test modified buffer
+	buf.content = "modified content"
+	if !buf.IsModified() {
+		t.Error("Buffer should be modified when content differs from original")
+	}
+}
+
+func TestBuildStatusBar_NewFile(t *testing.T) {
+	m := initialModel("")
+	// Set termWidth for test
+	termWidth = 80
+
+	statusBar := m.buildStatusBar()
+	if !strings.Contains(statusBar, "New File") {
+		t.Error("Status bar should show 'New File' when no buffer is loaded")
+	}
+}
+
+func TestBuildStatusBar_WithFile(t *testing.T) {
+	m := initialModel("")
+	// Set termWidth for test
+	termWidth = 120
+
+	// Add a buffer
+	m.buffers = []Buffer{
+		{
+			filePath:        "/path/to/test.go",
+			content:         "package main",
+			originalContent: "package main",
+			readOnly:        false,
+			fileSize:        100,
+		},
+	}
+	m.currentBuffer = 0
+
+	statusBar := m.buildStatusBar()
+
+	// Check left side content
+	if !strings.Contains(statusBar, "test.go") {
+		t.Error("Status bar should contain filename")
+	}
+	if !strings.Contains(statusBar, "[Go]") {
+		t.Error("Status bar should contain language in brackets")
+	}
+	if !strings.Contains(statusBar, "100 B") {
+		t.Error("Status bar should contain human-readable file size")
+	}
+
+	// Check right side content
+	if !strings.Contains(statusBar, "[utf-8]") {
+		t.Error("Status bar should contain file encoding")
+	}
+	if !strings.Contains(statusBar, "[/path/to]") {
+		t.Error("Status bar should contain directory path")
+	}
+}
+
+func TestBuildStatusBar_ModifiedFile(t *testing.T) {
+	m := initialModel("")
+	// Set termWidth for test
+	termWidth = 120
+
+	// Add a buffer with modification tracking
+	m.buffers = []Buffer{
+		{
+			filePath:        "/path/to/test.go",
+			content:         "package modified",
+			originalContent: "package main",
+			readOnly:        false,
+			fileSize:        100,
+		},
+	}
+	m.currentBuffer = 0
+	// Set the textarea value to simulate modification
+	m.syntaxTA.SetValue("package modified")
+
+	statusBar := m.buildStatusBar()
+
+	// Modified file should have asterisk
+	if !strings.Contains(statusBar, "test.go*") {
+		t.Error("Status bar should show asterisk for modified file")
+	}
+}
+
+func TestBuildStatusBar_ReadOnlyFile(t *testing.T) {
+	m := initialModel("")
+	// Set termWidth for test
+	termWidth = 120
+
+	// Add a read-only buffer
+	m.buffers = []Buffer{
+		{
+			filePath:        "/path/to/readonly.txt",
+			content:         "read only content",
+			originalContent: "read only content",
+			readOnly:        true,
+			fileSize:        17,
+		},
+	}
+	m.currentBuffer = 0
+
+	statusBar := m.buildStatusBar()
+
+	// Read-only file should have [RO] indicator
+	if !strings.Contains(statusBar, "[RO]") {
+		t.Error("Status bar should show [RO] for read-only file")
+	}
+}
+
+func TestBuildStatusBar_CursorPosition(t *testing.T) {
+	m := initialModel("")
+	// Set termWidth for test
+	termWidth = 120
+
+	// Add a buffer
+	m.buffers = []Buffer{
+		{
+			filePath:        "/path/to/test.go",
+			content:         "package main",
+			originalContent: "package main",
+			readOnly:        false,
+			fileSize:        100,
+		},
+	}
+	m.currentBuffer = 0
+
+	statusBar := m.buildStatusBar()
+
+	// Status bar should contain cursor position in line:col format
+	// Default position is 1:1 (first line, first column)
+	if !strings.Contains(statusBar, "1:1") {
+		t.Error("Status bar should contain cursor position (1:1 for default)")
 	}
 }

@@ -328,3 +328,11 @@ func intToStr(n int) string {
 func (s *SyntaxTextarea) GetLanguage() string {
 	return s.language
 }
+
+// CursorPosition returns the current cursor position as (line, column), both 1-indexed.
+func (s *SyntaxTextarea) CursorPosition() (int, int) {
+	line := s.textarea.Line() + 1 // Convert from 0-indexed to 1-indexed
+	lineInfo := s.textarea.LineInfo()
+	col := lineInfo.ColumnOffset + 1 // Convert from 0-indexed to 1-indexed
+	return line, col
+}
