@@ -15,7 +15,9 @@ A nano-like simple CLI text editor built with [Bubbletea](https://github.com/cha
   - Lists all files in the current file's directory
   - Use arrow keys to navigate, Enter to open
   - Esc or Ctrl-Space to close
-- **Syntax highlighting** powered by [Chroma](https://github.com/alecthomas/chroma) (read-only mode)
+- **Syntax highlighting** powered by [Chroma](https://github.com/alecthomas/chroma)
+  - Real-time syntax highlighting while editing (read-write mode)
+  - Syntax highlighting in viewport (read-only mode)
   - Automatic language detection based on file extension
   - 300+ supported languages out of the box
   - Multiple color themes available (default: Monokai)

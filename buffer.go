@@ -9,15 +9,15 @@ type Buffer struct {
 	readOnly bool
 }
 
-// moveCursorToTop moves the textarea cursor to position (0,0)
+// moveCursorToTop moves the syntaxTA cursor to position (0,0)
 func (m *model) moveCursorToTop() {
-	m.textarea.CursorStart()
-	for m.textarea.Line() > 0 {
-		m.textarea.CursorUp()
+	m.syntaxTA.CursorStart()
+	for m.syntaxTA.Line() > 0 {
+		m.syntaxTA.CursorUp()
 	}
 }
 
-// loadBuffer loads a buffer's content into the UI (textarea or viewport)
+// loadBuffer loads a buffer's content into the UI (syntaxTA or viewport)
 func (m *model) loadBuffer(idx int) {
 	if idx < 0 || idx >= len(m.buffers) {
 		return
@@ -37,7 +37,9 @@ func (m *model) loadBuffer(idx int) {
 			m.message = "WARNING: File is read-only. Editing disabled."
 		}
 	} else {
-		m.textarea.SetValue(buf.content)
+		// Set filename for syntax highlighting, then set content
+		m.syntaxTA.SetFilename(buf.filePath)
+		m.syntaxTA.SetValue(buf.content)
 		m.moveCursorToTop()
 		lang := core.DetectLanguage(buf.filePath)
 		if lang != "" {
@@ -57,7 +59,7 @@ func (m *model) saveCurrentBufferState() {
 
 	buf := &m.buffers[m.currentBuffer]
 	if !buf.readOnly {
-		buf.content = m.textarea.Value()
+		buf.content = m.syntaxTA.Value()
 	}
 }
 
