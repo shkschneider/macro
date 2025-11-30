@@ -168,7 +168,7 @@ func TestExecuteSave_WriteError(t *testing.T) {
 	if ctx.err == nil {
 		t.Error("expected error to be set")
 	}
-	if ctx.savedState != true {
+	if !ctx.savedState {
 		t.Error("state should still be saved before write attempt")
 	}
 }
