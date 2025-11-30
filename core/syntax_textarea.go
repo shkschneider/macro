@@ -40,10 +40,7 @@ func NewSyntaxTextarea() *SyntaxTextarea {
 	return &SyntaxTextarea{
 		textarea: ta,
 		lineNumberStyle: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
-			Width(5).
-			Align(lipgloss.Right).
-			MarginRight(1),
+			Foreground(lipgloss.Color("241")),
 		cursorLineStyle: lipgloss.NewStyle().
 			Background(lipgloss.Color("236")),
 	}
@@ -164,8 +161,13 @@ func (s *SyntaxTextarea) View() string {
 
 	var result strings.Builder
 	for i := startLine; i < endLine; i++ {
-		// Line number
-		lineNum := s.lineNumberStyle.Render(intToStr(i + 1))
+		// Line number with manual padding (right-aligned in 4 chars + space)
+		numStr := intToStr(i + 1)
+		padding := ""
+		if len(numStr) < 4 {
+			padding = strings.Repeat(" ", 4-len(numStr))
+		}
+		lineNum := s.lineNumberStyle.Render(padding + numStr) + " "
 
 		// Get the highlighted line content
 		var lineContent string
@@ -178,8 +180,6 @@ func (s *SyntaxTextarea) View() string {
 		// If this is the cursor line, show the cursor
 		if i == cursorLine && s.textarea.Focused() {
 			lineContent = s.insertCursor(lines[i], highlightedLines[i], cursorCol)
-			// Optional: highlight the entire cursor line background
-			// lineContent = s.cursorLineStyle.Render(lineContent)
 		}
 
 		result.WriteString(lineNum)
@@ -195,7 +195,7 @@ func (s *SyntaxTextarea) View() string {
 		if i > 0 {
 			result.WriteString("\n")
 		}
-		lineNum := s.lineNumberStyle.Render("~")
+		lineNum := s.lineNumberStyle.Render("   ~") + " "
 		result.WriteString(lineNum)
 	}
 
