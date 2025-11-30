@@ -190,7 +190,7 @@ func (s *SyntaxTextarea) View() string {
 	highlightedLines := strings.Split(highlightedContent, "\n")
 
 	// Compute diff states for change indicators
-	diffResult := s.diffTracker.ComputeDiff(content)
+	lineStates, deletedAt := s.diffTracker.ComputeLineStatesWithDeletions(content)
 
 	// Get cursor position from textarea
 	cursorLine := s.textarea.Line()
@@ -227,14 +227,6 @@ func (s *SyntaxTextarea) View() string {
 
 	var result strings.Builder
 	for i := startLine; i < endLine; i++ {
-		// Check if there are deleted lines above this line (show red dot)
-		if i < len(diffResult.DeletionsAbove) && diffResult.DeletionsAbove[i] {
-			// Show a deletion marker row (small dot between line numbers)
-			result.WriteString(s.lineNumberStyle.Render("    "))
-			result.WriteString(DiffDeletedStyle.Render("•"))
-			result.WriteString("\n")
-		}
-
 		// Line number with manual padding (right-aligned in 4 chars)
 		numStr := intToStr(i + 1)
 		padding := ""
@@ -243,8 +235,8 @@ func (s *SyntaxTextarea) View() string {
 		}
 		lineNum := s.lineNumberStyle.Render(padding + numStr)
 
-		// Get diff indicator for this line (only for added/modified, not deleted)
-		diffIndicator := s.getDiffIndicator(i, diffResult.LineStates)
+		// Get diff indicator for this line
+		diffIndicator := s.getDiffIndicator(i, lineStates, deletedAt)
 
 		// Get the highlighted line content
 		var lineContent string
@@ -269,13 +261,6 @@ func (s *SyntaxTextarea) View() string {
 		}
 	}
 
-	// Check for deletions at the very end (after all current lines)
-	if len(lines) < len(diffResult.DeletionsAbove) && diffResult.DeletionsAbove[len(lines)] {
-		result.WriteString("\n")
-		result.WriteString(s.lineNumberStyle.Render("    "))
-		result.WriteString(DiffDeletedStyle.Render("•"))
-	}
-
 	// Pad with empty lines if needed
 	for i := endLine - startLine; i < visibleLines; i++ {
 		if i > 0 {
@@ -291,14 +276,21 @@ func (s *SyntaxTextarea) View() string {
 }
 
 // getDiffIndicator returns a colored "|" indicator based on the line's diff state.
-// Only shows indicators for added (green) and modified (yellow) lines.
-// Deleted lines are shown as dots between lines, not on the line itself.
-func (s *SyntaxTextarea) getDiffIndicator(lineIdx int, diffStates []LineState) string {
-	if lineIdx >= len(diffStates) {
+// - Green "|" for added lines (new lines that didn't exist in original)
+// - Yellow "|" for modified lines (content changed from original)
+// - Red "|" for positions where lines were deleted from original
+func (s *SyntaxTextarea) getDiffIndicator(lineIdx int, lineStates []LineState, deletedAt []bool) string {
+	// First check if there's a deleted line at this position
+	if lineIdx < len(deletedAt) && deletedAt[lineIdx] {
+		return DiffDeletedStyle.Render("|")
+	}
+
+	// Then check the state of the current line
+	if lineIdx >= len(lineStates) {
 		return " " // No diff info, return space
 	}
 
-	switch diffStates[lineIdx] {
+	switch lineStates[lineIdx] {
 	case LineAdded:
 		return DiffAddedStyle.Render("|")
 	case LineModified:

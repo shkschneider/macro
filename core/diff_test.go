@@ -60,21 +60,23 @@ func TestDiffTracker_NoChanges(t *testing.T) {
 
 func TestDiffTracker_AddedLines(t *testing.T) {
 	tracker := NewDiffTracker()
-	tracker.SetOriginal("line1\nline3")
+	// Original: line1, line2
+	// Current:  line1, line2, line3
+	// Line 3 is added (new line at end)
+	tracker.SetOriginal("line1\nline2")
 	states := tracker.ComputeLineStates("line1\nline2\nline3")
 
-	// line1: unchanged, line2: added, line3: unchanged
 	if len(states) != 3 {
 		t.Fatalf("Expected 3 states, got %d", len(states))
 	}
 	if states[0] != LineUnchanged {
 		t.Errorf("line1 should be unchanged, got %v", states[0])
 	}
-	if states[1] != LineAdded {
-		t.Errorf("line2 should be added, got %v", states[1])
+	if states[1] != LineUnchanged {
+		t.Errorf("line2 should be unchanged, got %v", states[1])
 	}
-	if states[2] != LineUnchanged {
-		t.Errorf("line3 should be unchanged, got %v", states[2])
+	if states[2] != LineAdded {
+		t.Errorf("line3 should be added, got %v", states[2])
 	}
 }
 
@@ -178,44 +180,58 @@ func TestSplitLines(t *testing.T) {
 
 func TestDiffTracker_DeletedLines(t *testing.T) {
 	tracker := NewDiffTracker()
+	// Original: line1, line2, line3
+	// Current:  line1, line3
+	// Line at position 2 was deleted (or modified to line3)
 	tracker.SetOriginal("line1\nline2\nline3")
-	result := tracker.ComputeDiff("line1\nline3")
+	states, deletedAt := tracker.ComputeLineStatesWithDeletions("line1\nline3")
 
-	// line1: unchanged, line3: unchanged
-	if len(result.LineStates) != 2 {
-		t.Fatalf("Expected 2 states, got %d", len(result.LineStates))
+	// With line-by-line comparison:
+	// Position 0: line1 == line1 -> unchanged
+	// Position 1: line3 != line2 -> modified
+	if len(states) != 2 {
+		t.Fatalf("Expected 2 states, got %d", len(states))
 	}
-	if result.LineStates[0] != LineUnchanged {
-		t.Errorf("line1 should be unchanged, got %v", result.LineStates[0])
+	if states[0] != LineUnchanged {
+		t.Errorf("line1 should be unchanged, got %v", states[0])
 	}
-	if result.LineStates[1] != LineUnchanged {
-		t.Errorf("line3 should be unchanged, got %v", result.LineStates[1])
+	if states[1] != LineModified {
+		t.Errorf("line at position 1 should be modified (line3 replaced line2), got %v", states[1])
 	}
 
-	// Deletion marker should be above line3 (index 1)
-	if len(result.DeletionsAbove) != 3 {
-		t.Fatalf("Expected 3 deletion markers, got %d", len(result.DeletionsAbove))
+	// Deletion marker at position 2 (original had line3 there)
+	if len(deletedAt) < 3 {
+		t.Fatalf("Expected at least 3 deletion markers, got %d", len(deletedAt))
 	}
-	if result.DeletionsAbove[1] != true {
-		t.Errorf("Expected deletion marker above line 1 (line3)")
+	if !deletedAt[2] {
+		t.Errorf("Expected deletion marker at position 2")
 	}
 }
 
 func TestDiffTracker_DeletionAtEnd(t *testing.T) {
 	tracker := NewDiffTracker()
+	// Original: line1, line2, line3
+	// Current:  line1
+	// Lines at positions 2 and 3 were deleted
 	tracker.SetOriginal("line1\nline2\nline3")
-	result := tracker.ComputeDiff("line1")
+	states, deletedAt := tracker.ComputeLineStatesWithDeletions("line1")
 
 	// Only line1 remains
-	if len(result.LineStates) != 1 {
-		t.Fatalf("Expected 1 state, got %d", len(result.LineStates))
+	if len(states) != 1 {
+		t.Fatalf("Expected 1 state, got %d", len(states))
 	}
-	if result.LineStates[0] != LineUnchanged {
-		t.Errorf("line1 should be unchanged, got %v", result.LineStates[0])
+	if states[0] != LineUnchanged {
+		t.Errorf("line1 should be unchanged, got %v", states[0])
 	}
 
-	// Deletion markers should be at end (index 1, which is after all current lines)
-	if len(result.DeletionsAbove) != 2 {
-		t.Fatalf("Expected 2 deletion markers, got %d", len(result.DeletionsAbove))
+	// Deletion markers at positions 1 and 2
+	if len(deletedAt) < 3 {
+		t.Fatalf("Expected at least 3 deletion markers, got %d", len(deletedAt))
+	}
+	if !deletedAt[1] {
+		t.Errorf("Expected deletion marker at position 1")
+	}
+	if !deletedAt[2] {
+		t.Errorf("Expected deletion marker at position 2")
 	}
 }
