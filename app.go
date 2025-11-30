@@ -63,7 +63,8 @@ type model struct {
 	message       string   // Message line for errors/warnings/info
 	err           error
 	showPicker    bool
-	activeDialog  core.Dialog // Single active dialog (nil when closed)
+	activeDialog  core.Dialog         // Single active dialog (nil when closed)
+	cursorState   *core.CursorState   // Persistent cursor position storage
 }
 
 func initialModel(filePath string) model {
@@ -86,6 +87,7 @@ func initialModel(filePath string) model {
 		err:           nil,
 		showPicker:    false,
 		activeDialog:  nil,
+		cursorState:   core.NewCursorState(),
 	}
 
 	if filePath != "" {
@@ -142,6 +144,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			if key.Matches(msg, DefaultKeyMap.Quit) {
+				// Save cursor state before quitting
+				m.saveCurrentBufferState()
+				if m.cursorState != nil {
+					_ = m.cursorState.Save()
+				}
 				return m, tea.Quit
 			}
 		case tea.WindowSizeMsg:
@@ -210,6 +217,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Handle custom dialog result messages
 	switch msg := msg.(type) {
 	case feature.FileSelectedMsg:
+		// Save current buffer state before opening new file
+		m.saveCurrentBufferState()
 		// Load the selected file into a new buffer
 		content, err := os.ReadFile(msg.Path)
 		if err == nil {
@@ -230,6 +239,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case feature.BufferSelectedMsg:
+		// Save current buffer state before switching
+		m.saveCurrentBufferState()
 		// Switch to selected buffer
 		m.loadBuffer(msg.Index)
 		m.message = fmt.Sprintf("Switched to buffer")
@@ -246,6 +257,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		// Handle key bindings using key.Matches
 		if key.Matches(msg, DefaultKeyMap.Quit) {
+			// Save cursor state before quitting
+			m.saveCurrentBufferState()
+			if m.cursorState != nil {
+				_ = m.cursorState.Save()
+			}
 			return m, tea.Quit
 		}
 		if key.Matches(msg, DefaultKeyMap.Save) {
@@ -393,6 +409,11 @@ func executeFileSave(m *model) tea.Cmd {
 
 // executeQuit quits the editor
 func executeQuit(m *model) tea.Cmd {
+	// Save cursor state before quitting
+	m.saveCurrentBufferState()
+	if m.cursorState != nil {
+		_ = m.cursorState.Save()
+	}
 	return tea.Quit
 }
 

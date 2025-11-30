@@ -110,6 +110,54 @@ func (s *SyntaxTextarea) Line() int {
 	return s.textarea.Line()
 }
 
+// Column returns the current column position (0-indexed).
+func (s *SyntaxTextarea) Column() int {
+	return s.textarea.LineInfo().CharOffset
+}
+
+// CursorDown moves cursor down one line.
+func (s *SyntaxTextarea) CursorDown() {
+	s.textarea.CursorDown()
+}
+
+// SetCursor sets the cursor column position within the current line.
+func (s *SyntaxTextarea) SetCursor(col int) {
+	s.textarea.SetCursor(col)
+}
+
+// LineCount returns the total number of lines.
+func (s *SyntaxTextarea) LineCount() int {
+	return s.textarea.LineCount()
+}
+
+// SetCursorPosition moves the cursor to the specified line and column.
+// It first moves to the top, then moves down to the target line, then sets the column.
+func (s *SyntaxTextarea) SetCursorPosition(line, column int) {
+	// Move to start
+	s.textarea.CursorStart()
+	for s.textarea.Line() > 0 {
+		s.textarea.CursorUp()
+	}
+
+	// Move to target line
+	lineCount := s.textarea.LineCount()
+	if line >= lineCount {
+		line = lineCount - 1
+	}
+	if line < 0 {
+		line = 0
+	}
+
+	for s.textarea.Line() < line {
+		s.textarea.CursorDown()
+	}
+
+	// Set column position
+	if column > 0 {
+		s.textarea.SetCursor(column)
+	}
+}
+
 // Update handles messages and updates the textarea state.
 func (s *SyntaxTextarea) Update(msg tea.Msg) (*SyntaxTextarea, tea.Cmd) {
 	var cmd tea.Cmd
