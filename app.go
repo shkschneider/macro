@@ -513,27 +513,26 @@ func (m *model) buildStatusBar() string {
 	}
 
 	// File size
-	leftParts = append(leftParts, "|", humanize.Bytes(uint64(buf.fileSize)))
+	leftParts = append(leftParts, humanize.Bytes(uint64(buf.fileSize)))
+
+	if readOnly {
+		leftParts = append(leftParts, "(read-only)")
+	}
 
 	leftSection := strings.Join(leftParts, " ")
 
 	// Build right side: "line:col [RO] [fileencoding] [directory/path]"
 	rightParts := []string{}
 
+	// File encoding (assuming UTF-8 as default since we're reading text files)
+	// rightParts = append(rightParts, "[utf-8]")
+
 	// Cursor position (line:column)
 	line, col := m.syntaxTA.CursorPosition()
 	rightParts = append(rightParts, fmt.Sprintf("%d:%d", line, col))
 
-	// Read-only indicator
-	if readOnly {
-		rightParts = append(rightParts, "[RO]")
-	}
-
-	// File encoding (assuming UTF-8 as default since we're reading text files)
-	rightParts = append(rightParts, "[utf-8]")
-
 	// Directory path
-	rightParts = append(rightParts, "["+dirPath+"]")
+	rightParts = append(rightParts, "["+dirPath+"/]")
 
 	rightSection := strings.Join(rightParts, " ")
 
