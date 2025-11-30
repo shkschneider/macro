@@ -377,41 +377,6 @@ func (m model) View() string {
 	return baseView
 }
 
-// executeFileSave saves the current buffer to disk
-func executeFileSave(m *model) tea.Cmd {
-	readOnly := m.isCurrentBufferReadOnly()
-	if readOnly {
-		m.message = "WARNING: Cannot save - file is read-only"
-		return nil
-	}
-	filePath := m.getCurrentFilePath()
-	if filePath == "" {
-		m.message = "Error: No filename specified. Usage: macro <filename>"
-		m.err = fmt.Errorf("no filename")
-	} else {
-		// Save current buffer state first
-		m.saveCurrentBufferState()
-		content := m.syntaxTA.Value()
-		err := os.WriteFile(filePath, []byte(content), 0644)
-		if err != nil {
-			m.message = fmt.Sprintf("Error saving: %v", err)
-			m.err = err
-		} else {
-			m.message = fmt.Sprintf("Saved to %s", filePath)
-			m.err = nil
-			// Update original content and file size after successful save
-			if buf := m.getCurrentBuffer(); buf != nil {
-				buf.originalContent = content
-				// Update file size from the newly written file
-				if info, err := os.Stat(filePath); err == nil {
-					buf.fileSize = info.Size()
-				}
-			}
-		}
-	}
-	return nil
-}
-
 // executeQuit quits the editor
 func executeQuit(m *model) tea.Cmd {
 	// Save cursor state before quitting

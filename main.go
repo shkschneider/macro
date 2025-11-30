@@ -60,12 +60,18 @@ func main() {
 		Description: feature.HelpCommand().Description,
 		Execute:     executeCommandPalette,
 	})
+
+	// Register save command - uses feature's execution logic via EditorContext
+	saveCmd := feature.SaveCommand()
 	registerCommand(Command{
-		Name:        feature.SaveCommand().Name,
-		Key:         feature.SaveCommand().Key,
-		Description: feature.SaveCommand().Description,
-		Execute:     executeFileSave,
+		Name:        saveCmd.Name,
+		Key:         saveCmd.Key,
+		Description: saveCmd.Description,
+		Execute: func(m *model) tea.Cmd {
+			return saveCmd.Execute(m)
+		},
 	})
+
 	registerCommand(Command{
 		Name:        feature.QuitCommand().Name,
 		Key:         feature.QuitCommand().Key,
