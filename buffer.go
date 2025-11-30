@@ -1,5 +1,7 @@
 package main
 
+import core "github.com/shkschneider/macro/core"
+
 // Buffer represents an open file with its state
 type Buffer struct {
 	filePath string
@@ -24,9 +26,16 @@ func (m *model) loadBuffer(idx int) {
 	buf := m.buffers[idx]
 
 	if buf.readOnly {
-		m.viewport.SetContent(buf.content)
+		// Apply syntax highlighting for read-only files in viewport
+		highlightedContent := core.HighlightCode(buf.content, buf.filePath, "")
+		m.viewport.SetContent(highlightedContent)
 		m.viewport.GotoTop()
-		m.message = "WARNING: File is read-only. Editing disabled."
+		lang := core.DetectLanguage(buf.filePath)
+		if lang != "" {
+			m.message = "WARNING: File is read-only. Editing disabled. [" + lang + "]"
+		} else {
+			m.message = "WARNING: File is read-only. Editing disabled."
+		}
 	} else {
 		m.textarea.SetValue(buf.content)
 		m.moveCursorToTop()
