@@ -46,18 +46,21 @@ func main() {
 		Name:        feature.FileSwitcherCommand().Name,
 		Key:         feature.FileSwitcherCommand().Key,
 		Description: feature.FileSwitcherCommand().Description,
+		KeyBinding:  feature.FileSwitcherCommand().KeyBinding,
 		Execute:     executeFileSwitcher,
 	})
 	registerCommand(Command{
 		Name:        feature.BufferSwitcherCommand().Name,
 		Key:         feature.BufferSwitcherCommand().Key,
 		Description: feature.BufferSwitcherCommand().Description,
+		KeyBinding:  feature.BufferSwitcherCommand().KeyBinding,
 		Execute:     executeBufferSwitcher,
 	})
 	registerCommand(Command{
 		Name:        feature.HelpCommand().Name,
 		Key:         feature.HelpCommand().Key,
 		Description: feature.HelpCommand().Description,
+		KeyBinding:  feature.HelpCommand().KeyBinding,
 		Execute:     executeCommandPalette,
 	})
 
@@ -67,6 +70,7 @@ func main() {
 		Name:        saveCmd.Name,
 		Key:         saveCmd.Key,
 		Description: saveCmd.Description,
+		KeyBinding:  saveCmd.KeyBinding,
 		Execute: func(m *model) tea.Cmd {
 			return saveCmd.Execute(m)
 		},
@@ -76,6 +80,7 @@ func main() {
 		Name:        feature.QuitCommand().Name,
 		Key:         feature.QuitCommand().Key,
 		Description: feature.QuitCommand().Description,
+		KeyBinding:  feature.QuitCommand().KeyBinding,
 		Execute:     executeQuit,
 	})
 

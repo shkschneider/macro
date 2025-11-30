@@ -1,12 +1,16 @@
 package core
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	"github.com/charmbracelet/bubbles/key"
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 // CommandDef defines a command without execution logic
 type CommandDef struct {
 	Name        string
 	Key         string
 	Description string
+	KeyBinding  key.Binding
 }
 
 // BufferInfo contains information about a buffer for dialogs
@@ -36,5 +40,6 @@ type FeatureCommand struct {
 	Name        string
 	Key         string
 	Description string
+	KeyBinding  key.Binding
 	Execute     func(ctx EditorContext) tea.Cmd
 }

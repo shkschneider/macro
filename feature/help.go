@@ -13,12 +13,19 @@ import (
 
 // ====== Command Registration ======
 
+// HelpKeyBinding is the key binding for the command palette
+var HelpKeyBinding = key.NewBinding(
+	key.WithKeys("ctrl+@", "ctrl+ "), // ctrl+@ is what ctrl+space sends
+	key.WithHelp("ctrl+space", "open command palette"),
+)
+
 // HelpCommand returns the command definition for showing help
 func HelpCommand() macro.CommandDef {
 	return macro.CommandDef{
 		Name:        "help-show",
 		Key:         "Ctrl-Space",
 		Description: "Show command palette",
+		KeyBinding:  HelpKeyBinding,
 	}
 }
 

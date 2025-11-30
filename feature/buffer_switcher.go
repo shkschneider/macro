@@ -14,12 +14,19 @@ import (
 
 // ====== Command Registration ======
 
+// BufferSwitcherKeyBinding is the key binding for the buffer switcher command
+var BufferSwitcherKeyBinding = key.NewBinding(
+	key.WithKeys("ctrl+b"),
+	key.WithHelp("ctrl+b", "switch buffer"),
+)
+
 // BufferSwitcherCommand returns the command definition for buffer switching
 func BufferSwitcherCommand() macro.CommandDef {
 	return macro.CommandDef{
 		Name:        "buffer-switch",
 		Key:         "Ctrl-B",
 		Description: "Open buffer switcher dialog",
+		KeyBinding:  BufferSwitcherKeyBinding,
 	}
 }
 

@@ -15,12 +15,19 @@ import (
 
 // ====== Command Registration ======
 
+// FileSwitcherKeyBinding is the key binding for the file switcher command
+var FileSwitcherKeyBinding = key.NewBinding(
+	key.WithKeys("ctrl+p"),
+	key.WithHelp("ctrl+p", "open file switcher"),
+)
+
 // FileSwitcherCommand returns the command definition for file switching
 func FileSwitcherCommand() macro.CommandDef {
 	return macro.CommandDef{
 		Name:        "file-open",
-		Key:         "Ctrl-Space",
+		Key:         "Ctrl-P",
 		Description: "Open file switcher",
+		KeyBinding:  FileSwitcherKeyBinding,
 	}
 }
 

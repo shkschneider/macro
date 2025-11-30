@@ -6,23 +6,24 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	feature "github.com/shkschneider/macro/feature"
 )
 
-func TestDefaultKeyMap_Quit(t *testing.T) {
+func TestFeatureKeyBinding_Quit(t *testing.T) {
 	msg := tea.KeyMsg{Type: tea.KeyCtrlQ}
-	if !key.Matches(msg, DefaultKeyMap.Quit) {
+	if !key.Matches(msg, feature.QuitKeyBinding) {
 		t.Error("Ctrl+Q should match Quit binding")
 	}
 }
 
-func TestDefaultKeyMap_Save(t *testing.T) {
+func TestFeatureKeyBinding_Save(t *testing.T) {
 	msg := tea.KeyMsg{Type: tea.KeyCtrlS}
-	if !key.Matches(msg, DefaultKeyMap.Save) {
+	if !key.Matches(msg, feature.SaveKeyBinding) {
 		t.Error("Ctrl+S should match Save binding")
 	}
 }
 
-func TestDefaultKeyMap_FileOpen(t *testing.T) {
+func TestFeatureKeyBinding_FileOpen(t *testing.T) {
 	// Test ctrl+p
 	msg := tea.KeyMsg{
 		Type:  tea.KeyRunes,
@@ -30,40 +31,40 @@ func TestDefaultKeyMap_FileOpen(t *testing.T) {
 		Alt:   false,
 	}
 	msg.Type = tea.KeyCtrlP
-	if !key.Matches(msg, DefaultKeyMap.FileOpen) {
+	if !key.Matches(msg, feature.FileSwitcherKeyBinding) {
 		t.Error("Ctrl+P should match FileOpen binding")
 	}
 }
 
-func TestDefaultKeyMap_BufferSwitch(t *testing.T) {
+func TestFeatureKeyBinding_BufferSwitch(t *testing.T) {
 	// Test ctrl+b
 	msg := tea.KeyMsg{
 		Type: tea.KeyCtrlB,
 	}
-	if !key.Matches(msg, DefaultKeyMap.BufferSwitch) {
+	if !key.Matches(msg, feature.BufferSwitcherKeyBinding) {
 		t.Error("Ctrl+B should match BufferSwitch binding")
 	}
 }
 
-func TestDefaultKeyMap_CommandPalette(t *testing.T) {
+func TestFeatureKeyBinding_CommandPalette(t *testing.T) {
 	// Test ctrl+@ (which is what ctrl+space sends)
 	msg := tea.KeyMsg{Type: tea.KeyCtrlAt}
-	if !key.Matches(msg, DefaultKeyMap.CommandPalette) {
+	if !key.Matches(msg, feature.HelpKeyBinding) {
 		t.Error("Ctrl+@ (Ctrl+Space) should match CommandPalette binding")
 	}
 }
 
-func TestKeyMap_AllBindingsHaveHelp(t *testing.T) {
-	// Verify all bindings have help text
+func TestFeatureKeyBindings_AllHaveHelp(t *testing.T) {
+	// Verify all feature bindings have help text
 	bindings := []struct {
 		name    string
 		binding key.Binding
 	}{
-		{"Quit", DefaultKeyMap.Quit},
-		{"Save", DefaultKeyMap.Save},
-		{"CommandPalette", DefaultKeyMap.CommandPalette},
-		{"FileOpen", DefaultKeyMap.FileOpen},
-		{"BufferSwitch", DefaultKeyMap.BufferSwitch},
+		{"Quit", feature.QuitKeyBinding},
+		{"Save", feature.SaveKeyBinding},
+		{"CommandPalette", feature.HelpKeyBinding},
+		{"FileOpen", feature.FileSwitcherKeyBinding},
+		{"BufferSwitch", feature.BufferSwitcherKeyBinding},
 	}
 
 	for _, b := range bindings {
@@ -75,6 +76,53 @@ func TestKeyMap_AllBindingsHaveHelp(t *testing.T) {
 			t.Errorf("%s binding should have help description", b.name)
 		}
 	}
+}
+
+func TestGetCommandByKey_ReturnsCorrectCommand(t *testing.T) {
+	// Register commands for testing
+	commandRegistry = nil // Reset registry
+	registerCommand(Command{
+		Name:        "test-quit",
+		Key:         "Ctrl-Q",
+		Description: "Test quit",
+		KeyBinding:  feature.QuitKeyBinding,
+		Execute:     nil,
+	})
+	registerCommand(Command{
+		Name:        "test-save",
+		Key:         "Ctrl-S",
+		Description: "Test save",
+		KeyBinding:  feature.SaveKeyBinding,
+		Execute:     nil,
+	})
+
+	// Test that Ctrl+Q matches quit command
+	quitMsg := tea.KeyMsg{Type: tea.KeyCtrlQ}
+	cmd := getCommandByKey(quitMsg)
+	if cmd == nil {
+		t.Error("getCommandByKey should return command for Ctrl+Q")
+	} else if cmd.Name != "test-quit" {
+		t.Errorf("getCommandByKey returned wrong command, got %s, want test-quit", cmd.Name)
+	}
+
+	// Test that Ctrl+S matches save command
+	saveMsg := tea.KeyMsg{Type: tea.KeyCtrlS}
+	cmd = getCommandByKey(saveMsg)
+	if cmd == nil {
+		t.Error("getCommandByKey should return command for Ctrl+S")
+	} else if cmd.Name != "test-save" {
+		t.Errorf("getCommandByKey returned wrong command, got %s, want test-save", cmd.Name)
+	}
+
+	// Test that unregistered key returns nil
+	unknownMsg := tea.KeyMsg{Type: tea.KeyCtrlX}
+	cmd = getCommandByKey(unknownMsg)
+	if cmd != nil {
+		t.Error("getCommandByKey should return nil for unregistered key")
+	}
+
+	// Reset registry
+	commandRegistry = nil
 }
 
 func TestBuffer_IsModified(t *testing.T) {

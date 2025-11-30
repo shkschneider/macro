@@ -4,8 +4,15 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	macro "github.com/shkschneider/macro/core"
+)
+
+// SaveKeyBinding is the key binding for the save command
+var SaveKeyBinding = key.NewBinding(
+	key.WithKeys("ctrl+s"),
+	key.WithHelp("ctrl+s", "save file"),
 )
 
 // SaveCommand returns the command definition for saving files with execution logic
@@ -14,6 +21,7 @@ func SaveCommand() macro.FeatureCommand {
 		Name:        "file-save",
 		Key:         "Ctrl-S",
 		Description: "Save current buffer to disk",
+		KeyBinding:  SaveKeyBinding,
 		Execute:     executeSave,
 	}
 }
