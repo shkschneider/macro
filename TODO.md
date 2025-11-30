@@ -1,11 +1,11 @@
 # TODO
 
-[ ] UTF-8
+[~] UTF-8
 [x] split implementation / architecture
 [x] load file or directory
-[~] status line
+[x] status line
 [x] syntax highligthing
-[~] dialogs
+[x] dialogs
 [~] load multiple files
 [~] more keybindings
 [ ] configuration

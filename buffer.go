@@ -50,7 +50,8 @@ func (m *model) loadBuffer(idx int) {
 			m.message = "WARNING: File is read-only. Editing disabled."
 		}
 	} else {
-		// Set filename for syntax highlighting, then set content
+		// Set filename for syntax highlighting and diff tracking
+		// SetFilename also sets up git diff tracking for git-tracked files
 		m.syntaxTA.SetFilename(buf.filePath)
 		m.syntaxTA.SetValue(buf.content)
 
