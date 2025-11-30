@@ -111,8 +111,8 @@ func initialModel(filePath string) model {
 				m.err = err
 				return m
 			}
-			// Check if file is read-only
-			readOnly := info.Mode()&0200 == 0
+			// Check if file is read-only based on permissions and CLI flags
+			readOnly := determineReadOnly(info)
 
 			// Create initial buffer
 			buf := Buffer{
@@ -165,7 +165,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				info, statErr := os.Stat(path)
 				readOnly := false
 				if statErr == nil {
-					readOnly = info.Mode()&0200 == 0
+					readOnly = determineReadOnly(info)
 				}
 
 				bufferIdx := m.addBuffer(path, string(content), readOnly)
@@ -219,7 +219,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			info, statErr := os.Stat(msg.Path)
 			readOnly := false
 			if statErr == nil {
-				readOnly = info.Mode()&0200 == 0
+				readOnly = determineReadOnly(info)
 			}
 
 			bufferIdx := m.addBuffer(msg.Path, string(content), readOnly)
@@ -440,4 +440,20 @@ func executeCommandPalette(m *model) tea.Cmd {
 	}
 	m.activeDialog = feature.NewHelpDialog(commands)
 	return m.activeDialog.Init()
+}
+
+// determineReadOnly determines the read-only state based on file info and CLI flags
+func determineReadOnly(info os.FileInfo) bool {
+	// Check file permissions
+	fileIsWritable := info.Mode()&0200 != 0
+
+	switch globalReadOnlyMode {
+	case ReadOnlyForced:
+		return true
+	case ReadWriteForced:
+		// Only allow read-write if file is actually writable
+		return !fileIsWritable
+	default: // ReadOnlyAuto
+		return !fileIsWritable
+	}
 }

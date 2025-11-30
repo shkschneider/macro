@@ -34,10 +34,23 @@ go build -o macro
 # Create or edit a new file
 ./macro filename.txt
 
+# Force read-only mode (syntax highlighting in viewport)
+./macro -ro filename.txt
+
+# Force read-write mode (if file permissions allow)
+./macro -rw filename.txt
+
 # The editor will open in your terminal
 # Use Ctrl-S to save changes
 # Use Ctrl-Q to quit
 ```
+
+### CLI Options
+
+| Flag | Description |
+|------|-------------|
+| `-ro` | Force read-only mode (uses viewport with syntax highlighting) |
+| `-rw` | Force read-write mode (uses textarea for editing, if file is writable) |
 
 ## Requirements
 
