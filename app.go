@@ -483,7 +483,7 @@ func determineReadOnly(info os.FileInfo) bool {
 
 // buildStatusBar creates the formatted status bar with left and right sections
 // Left: "filename.ext* [language] | human filesize"
-// Right: "[RO] [fileencoding] charset [directory/path]"
+// Right: "line:col [RO] [fileencoding] [directory/path]"
 func (m *model) buildStatusBar() string {
 	buf := m.getCurrentBuffer()
 	if buf == nil {
@@ -517,8 +517,12 @@ func (m *model) buildStatusBar() string {
 
 	leftSection := strings.Join(leftParts, " ")
 
-	// Build right side: "[RO] [fileencoding] charset [directory/path]"
+	// Build right side: "line:col [RO] [fileencoding] [directory/path]"
 	rightParts := []string{}
+
+	// Cursor position (line:column)
+	line, col := m.syntaxTA.CursorPosition()
+	rightParts = append(rightParts, fmt.Sprintf("%d:%d", line, col))
 
 	// Read-only indicator
 	if readOnly {

@@ -198,3 +198,29 @@ func TestBuildStatusBar_ReadOnlyFile(t *testing.T) {
 		t.Error("Status bar should show [RO] for read-only file")
 	}
 }
+
+func TestBuildStatusBar_CursorPosition(t *testing.T) {
+	m := initialModel("")
+	// Set termWidth for test
+	termWidth = 120
+
+	// Add a buffer
+	m.buffers = []Buffer{
+		{
+			filePath:        "/path/to/test.go",
+			content:         "package main",
+			originalContent: "package main",
+			readOnly:        false,
+			fileSize:        100,
+		},
+	}
+	m.currentBuffer = 0
+
+	statusBar := m.buildStatusBar()
+
+	// Status bar should contain cursor position in line:col format
+	// Default position is 1:1 (first line, first column)
+	if !strings.Contains(statusBar, "1:1") {
+		t.Error("Status bar should contain cursor position (1:1 for default)")
+	}
+}
