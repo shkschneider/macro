@@ -102,3 +102,74 @@ func TestIntToStr(t *testing.T) {
 		}
 	}
 }
+
+func TestSyntaxTextarea_CursorPosition(t *testing.T) {
+	sta := NewSyntaxTextarea()
+	sta.SetValue("line 1\nline 2\nline 3\nline 4\nline 5")
+	
+	// Move cursor to start (line 0)
+	sta.SetCursorPosition(0, 0)
+	
+	if sta.Line() != 0 {
+		t.Errorf("After SetCursorPosition(0, 0), line should be 0, got %d", sta.Line())
+	}
+	
+	// Move cursor to line 2, column 3
+	sta.SetCursorPosition(2, 3)
+	
+	if sta.Line() != 2 {
+		t.Errorf("Expected line 2, got %d", sta.Line())
+	}
+	
+	// Test Column() method
+	col := sta.Column()
+	if col != 3 {
+		t.Errorf("Expected column 3, got %d", col)
+	}
+}
+
+func TestSyntaxTextarea_CursorPositionBounds(t *testing.T) {
+	sta := NewSyntaxTextarea()
+	sta.SetValue("line 1\nline 2\nline 3")
+	
+	// Test setting cursor beyond last line
+	sta.SetCursorPosition(100, 0)
+	if sta.Line() > 2 {
+		t.Errorf("Line should not exceed max, got %d", sta.Line())
+	}
+	
+	// Test setting negative line
+	sta.SetCursorPosition(-5, 0)
+	if sta.Line() < 0 {
+		t.Errorf("Line should not be negative, got %d", sta.Line())
+	}
+}
+
+func TestSyntaxTextarea_LineCount(t *testing.T) {
+	sta := NewSyntaxTextarea()
+	sta.SetValue("line 1\nline 2\nline 3\nline 4")
+	
+	if sta.LineCount() != 4 {
+		t.Errorf("Expected 4 lines, got %d", sta.LineCount())
+	}
+}
+
+func TestSyntaxTextarea_CursorMovement(t *testing.T) {
+	sta := NewSyntaxTextarea()
+	sta.SetValue("line 1\nline 2\nline 3")
+	
+	// First move cursor to top
+	sta.SetCursorPosition(0, 0)
+	
+	// Move down
+	sta.CursorDown()
+	if sta.Line() != 1 {
+		t.Errorf("After CursorDown, expected line 1, got %d", sta.Line())
+	}
+	
+	// Move up
+	sta.CursorUp()
+	if sta.Line() != 0 {
+		t.Errorf("After CursorUp, expected line 0, got %d", sta.Line())
+	}
+}
