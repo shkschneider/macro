@@ -5,10 +5,13 @@ A nano-like simple CLI text editor built with [Bubbletea](https://github.com/cha
 ## Features
 
 - Simple terminal-based text editor with Elm-inspired architecture
+  - Main app only provides quit and command palette.
+  - All other features are modularized in plugins (default: vanilla).
 - Keyboard shortcuts similar to nano:
   - **Ctrl-S**: Save file
   - **Ctrl-Space**: Open fuzzy command palette
   - **Ctrl-Q**: Quit editor
+  - ...
 - **Syntax highlighting** powered by [Chroma](https://github.com/alecthomas/chroma)
 
 ## Installation
