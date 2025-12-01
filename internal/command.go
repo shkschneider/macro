@@ -3,22 +3,7 @@ package internal
 import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/shkschneider/macro/api"
 )
-
-func ExecuteCommandPalette(m *Model) tea.Cmd {
-	// Get all commands
-	var commands []api.CommandDef
-	for _, cmd := range GetKeybindings() {
-		commands = append(commands, api.CommandDef{
-			Name:        cmd.Name,
-			Key:         cmd.Key,
-			Description: cmd.Description,
-		})
-	}
-	m.ActiveDialog = NewPaletteDialog(commands)
-	return m.ActiveDialog.Init()
-}
 
 // Command represents an editor command with its keybinding and execution logic
 type Command struct {

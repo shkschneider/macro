@@ -22,6 +22,20 @@ var PaletteKeyBinding = key.NewBinding(
 	key.WithHelp("ctrl+space", "open command palette"),
 )
 
+func ExecuteCommandPalette(m *Model) tea.Cmd {
+	// Get all commands
+	var commands []api.CommandDef
+	for _, cmd := range GetKeybindings() {
+		commands = append(commands, api.CommandDef{
+			Name:        cmd.Name,
+			Key:         cmd.Key,
+			Description: cmd.Description,
+		})
+	}
+	m.ActiveDialog = NewPaletteDialog(commands)
+	return m.ActiveDialog.Init()
+}
+
 func init() {
 	api.RegisterCommand(api.CommandRegistration{
 		Name:          CmdPalette,
