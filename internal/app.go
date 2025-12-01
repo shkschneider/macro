@@ -51,7 +51,7 @@ func (m Model) Init() tea.Cmd {
 	if m.ShowPicker {
 		return m.Filepicker.Init()
 	}
-	return m.SyntaxTA.Focus()
+	return m.Textarea.Focus()
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -108,14 +108,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if contentHeight < 1 {
 					contentHeight = 1
 				}
-				m.SyntaxTA.SetWidth(TermWidth)
-				m.SyntaxTA.SetHeight(contentHeight)
+				m.Textarea.SetWidth(TermWidth)
+				m.Textarea.SetHeight(contentHeight)
 				m.Viewport.Width = TermWidth
 				m.Viewport.Height = contentHeight
 			}
 
-			m.SyntaxTA.Focus()
-			return m, m.SyntaxTA.Focus()
+			m.Textarea.Focus()
+			return m, m.Textarea.Focus()
 		}
 
 		return m, cmd
@@ -155,8 +155,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			contentHeight = 1
 		}
 
-		m.SyntaxTA.SetWidth(msg.Width)
-		m.SyntaxTA.SetHeight(contentHeight)
+		m.Textarea.SetWidth(msg.Width)
+		m.Textarea.SetHeight(contentHeight)
 		m.Viewport.Width = msg.Width
 		m.Viewport.Height = contentHeight
 
@@ -171,7 +171,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if readOnly && m.Err == nil {
 		m.Viewport, cmd = m.Viewport.Update(msg)
 	} else if !readOnly && m.Err == nil {
-		m.SyntaxTA, cmd = m.SyntaxTA.Update(msg)
+		m.Textarea, cmd = m.Textarea.Update(msg)
 	}
 	return m, cmd
 }
@@ -191,7 +191,7 @@ func (m Model) View() string {
 	if readOnly && m.Err == nil {
 		contentView = m.Viewport.View()
 	} else {
-		contentView = m.SyntaxTA.View()
+		contentView = m.Textarea.View()
 	}
 
 	// Build status bar with file info

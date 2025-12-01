@@ -44,15 +44,6 @@ func ExecuteBufferSwitcher(ctx api.EditorContext) tea.Cmd {
 	return nil
 }
 
-// BufferSwitcherCommand returns the command definition for buffer switching
-func BufferSwitcherCommand() api.CommandDef {
-	return api.CommandDef{
-		Name:        CmdBufferSwitch,
-		Key:         "Ctrl-B",
-		Description: "Open buffer switcher dialog",
-		KeyBinding:  BufferSwitcherKeyBinding,
-	}
-}
 
 // ====== Message Types ======
 

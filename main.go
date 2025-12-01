@@ -6,7 +6,6 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/shkschneider/macro/api"
 	"github.com/shkschneider/macro/internal"
 	_ "github.com/shkschneider/macro/plugins/vanilla" // Import to trigger init()
 )
@@ -23,28 +22,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Register all feature commands using auto-registration from api registry
-	api.Register(func(cmd api.CommandRegistration) {
-		var execFunc func(*internal.Model) tea.Cmd
-
-		// Special case: Help command needs access to CommandRegistry
-		if cmd.Name == internal.CmdPalette {
-			execFunc = internal.ExecuteCommandPalette
-		} else if cmd.PluginExecute != nil {
-			// Use the plugin's execute function via EditorContext
-			execFunc = func(m *internal.Model) tea.Cmd {
-				return cmd.PluginExecute(m)
-			}
-		}
-
-		internal.RegisterCommand(internal.Command{
-			Name:        cmd.Name,
-			Key:         cmd.Key,
-			Description: cmd.Description,
-			KeyBinding:  cmd.KeyBinding,
-			Execute:     execFunc,
-		})
-	})
+	// Register all commands from plugins (via api registry)
+	internal.RegisterFromAPI()
 
 	// Get filename from remaining command line args
 	args := flag.Args()

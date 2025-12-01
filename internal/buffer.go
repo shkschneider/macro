@@ -26,9 +26,9 @@ func (b *Buffer) IsModified() bool {
 
 // moveCursorToTop moves the syntaxTA cursor to position (0,0)
 func (m *Model) moveCursorToTop() {
-	m.SyntaxTA.CursorStart()
-	for m.SyntaxTA.Line() > 0 {
-		m.SyntaxTA.CursorUp()
+	m.Textarea.CursorStart()
+	for m.Textarea.Line() > 0 {
+		m.Textarea.CursorUp()
 	}
 }
 
@@ -54,17 +54,17 @@ func (m *Model) loadBuffer(idx int) {
 	} else {
 		// Set filename for syntax highlighting and diff tracking
 		// SetFilename also sets up git diff tracking for git-tracked files
-		m.SyntaxTA.SetFilename(buf.FilePath)
-		m.SyntaxTA.SetValue(buf.Content)
+		m.Textarea.SetFilename(buf.FilePath)
+		m.Textarea.SetValue(buf.Content)
 
 		// Restore cursor position: first check buffer state, then fall back to cursor state
 		if buf.CursorLine > 0 || buf.CursorCol > 0 {
 			// Use buffer's cached cursor position
-			m.SyntaxTA.SetCursorPosition(buf.CursorLine, buf.CursorCol)
+			m.Textarea.SetCursorPosition(buf.CursorLine, buf.CursorCol)
 		} else if m.CursorState != nil {
 			// Try to restore from persistent storage
 			if pos, ok := m.CursorState.GetPosition(buf.FilePath); ok {
-				m.SyntaxTA.SetCursorPosition(pos.Line, pos.Column)
+				m.Textarea.SetCursorPosition(pos.Line, pos.Column)
 			} else {
 				m.moveCursorToTop()
 			}
@@ -90,9 +90,9 @@ func (m *Model) saveCurrentBufferState() {
 
 	buf := &m.Buffers[m.CurrentBuffer]
 	if !buf.ReadOnly {
-		buf.Content = m.SyntaxTA.Value()
-		buf.CursorLine = m.SyntaxTA.Line()
-		buf.CursorCol = m.SyntaxTA.Column()
+		buf.Content = m.Textarea.Value()
+		buf.CursorLine = m.Textarea.Line()
+		buf.CursorCol = m.Textarea.Column()
 
 		// Persist to cursor state storage
 		if m.CursorState != nil {
@@ -146,7 +146,7 @@ func (m *Model) isCurrentBufferModified() bool {
 		buf := &m.Buffers[m.CurrentBuffer]
 		// For editable buffers, check current textarea content against original
 		if !buf.ReadOnly {
-			return m.SyntaxTA.Value() != buf.OriginalContent
+			return m.Textarea.Value() != buf.OriginalContent
 		}
 		return buf.IsModified()
 	}
@@ -184,7 +184,7 @@ func (m *Model) GetCurrentFilePath() string {
 
 // GetCurrentContent implements api.EditorContext
 func (m *Model) GetCurrentContent() string {
-	return m.SyntaxTA.Value()
+	return m.Textarea.Value()
 }
 
 // SaveCurrentBufferState implements api.EditorContext
@@ -225,6 +225,19 @@ func (m *Model) GetBuffers() []api.BufferInfo {
 // GetCurrentBufferIndex implements api.EditorContext
 func (m *Model) GetCurrentBufferIndex() int {
 	return m.CurrentBuffer
+}
+
+// HasUnsavedChanges implements api.EditorContext - returns true if any buffer has unsaved changes
+func (m *Model) HasUnsavedChanges() bool {
+	// First, save current buffer state to ensure we're checking latest content
+	m.saveCurrentBufferState()
+	
+	for _, buf := range m.Buffers {
+		if !buf.ReadOnly && buf.IsModified() {
+			return true
+		}
+	}
+	return false
 }
 
 // SetActiveDialog implements api.EditorContext
@@ -275,4 +288,37 @@ func (m *Model) ExecuteCommand(name string) tea.Cmd {
 		return cmd.Execute(m)
 	}
 	return nil
+}
+
+// IsCurrentBufferModified implements api.EditorContext - returns true if current buffer has unsaved changes
+func (m *Model) IsCurrentBufferModified() bool {
+	return m.isCurrentBufferModified()
+}
+
+// CloseCurrentBuffer implements api.EditorContext - closes the current buffer
+// Returns true if this was the last buffer (no more buffers remain)
+func (m *Model) CloseCurrentBuffer() bool {
+	if m.CurrentBuffer < 0 || m.CurrentBuffer >= len(m.Buffers) {
+		return true // No buffer to close
+	}
+
+	// Remove the current buffer
+	m.Buffers = append(m.Buffers[:m.CurrentBuffer], m.Buffers[m.CurrentBuffer+1:]...)
+
+	// Check if no buffers remain
+	if len(m.Buffers) == 0 {
+		m.CurrentBuffer = -1
+		// Clear the textarea when no buffers remain
+		m.Textarea.SetValue("")
+		return true
+	}
+
+	// Adjust current buffer index
+	if m.CurrentBuffer >= len(m.Buffers) {
+		m.CurrentBuffer = len(m.Buffers) - 1
+	}
+
+	// Load the new current buffer
+	m.loadBuffer(m.CurrentBuffer)
+	return false
 }

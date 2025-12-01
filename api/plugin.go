@@ -5,16 +5,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// PluginCommand represents a command with its execution logic defined by a plugin
-type PluginCommand struct {
-	Name        string
-	Key         string
-	Description string
-	KeyBinding  key.Binding
-	Execute     func(ctx EditorContext) tea.Cmd
-}
-
-// CommandRegistration represents a command to be registered with the main app
+// CommandRegistration represents a command to be registered with the main app.
+// Plugins define commands with their keybindings and optional execution logic.
 type CommandRegistration struct {
 	Name        string
 	Key         string
@@ -32,14 +24,6 @@ var registeredCommands []CommandRegistration
 // Plugins should call this in their init() function to self-register.
 func RegisterCommand(cmd CommandRegistration) {
 	registeredCommands = append(registeredCommands, cmd)
-}
-
-// Register calls the provided callback for each registered plugin command.
-// This allows plugins to auto-register with the main app's command registry.
-func Register(registerFunc func(cmd CommandRegistration)) {
-	for _, cmd := range registeredCommands {
-		registerFunc(cmd)
-	}
 }
 
 // GetCommands returns a copy of all registered plugin commands.

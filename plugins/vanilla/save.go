@@ -28,16 +28,6 @@ func init() {
 	})
 }
 
-// SaveCommand returns the command definition for saving files with execution logic
-func SaveCommand() api.PluginCommand {
-	return api.PluginCommand{
-		Name:        CmdSave,
-		Key:         "Ctrl-S",
-		Description: "Save current buffer to disk",
-		KeyBinding:  SaveKeyBinding,
-		Execute:     executeSave,
-	}
-}
 
 // executeSave saves the current buffer to disk
 func executeSave(ctx api.EditorContext) tea.Cmd {
