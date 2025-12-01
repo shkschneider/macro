@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sahilm/fuzzy"
 	macro "github.com/shkschneider/macro/core"
-	"github.com/shkschneider/macro/features"
+	plugin "github.com/shkschneider/macro/plugins"
 )
 
 // ====== Command Registration ======
@@ -24,7 +24,7 @@ var HelpKeyBinding = key.NewBinding(
 )
 
 func init() {
-	features.RegisterCommand(features.CommandRegistration{
+	plugin.RegisterCommand(plugin.CommandRegistration{
 		Name:           CmdHelp,
 		Key:            "Ctrl-Space",
 		Description:    "Show command palette",

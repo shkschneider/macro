@@ -3,7 +3,7 @@ package vanilla
 import (
 	"github.com/charmbracelet/bubbles/key"
 	macro "github.com/shkschneider/macro/core"
-	"github.com/shkschneider/macro/features"
+	plugin "github.com/shkschneider/macro/plugins"
 )
 
 // CmdQuit is the command name constant for quit
@@ -16,7 +16,7 @@ var QuitKeyBinding = key.NewBinding(
 )
 
 func init() {
-	features.RegisterCommand(features.CommandRegistration{
+	plugin.RegisterCommand(plugin.CommandRegistration{
 		Name:           CmdQuit,
 		Key:            "Ctrl-Q",
 		Description:    "Quit the editor",

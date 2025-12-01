@@ -12,7 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/dustin/go-humanize"
 	core "github.com/shkschneider/macro/core"
-	vanilla "github.com/shkschneider/macro/features/vanilla"
+	vanilla "github.com/shkschneider/macro/plugins/vanilla"
 )
 
 var (

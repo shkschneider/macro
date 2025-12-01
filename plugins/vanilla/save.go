@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	macro "github.com/shkschneider/macro/core"
-	"github.com/shkschneider/macro/features"
+	plugin "github.com/shkschneider/macro/plugins"
 )
 
 // CmdSave is the command name constant for save
@@ -20,7 +20,7 @@ var SaveKeyBinding = key.NewBinding(
 )
 
 func init() {
-	features.RegisterCommand(features.CommandRegistration{
+	plugin.RegisterCommand(plugin.CommandRegistration{
 		Name:           CmdSave,
 		Key:            "Ctrl-S",
 		Description:    "Save current buffer to disk",

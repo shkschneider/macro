@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	vanilla "github.com/shkschneider/macro/features/vanilla"
+	vanilla "github.com/shkschneider/macro/plugins/vanilla"
 )
 
 func TestFeatureKeyBinding_Quit(t *testing.T) {

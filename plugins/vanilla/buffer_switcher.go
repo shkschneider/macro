@@ -10,7 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sahilm/fuzzy"
 	macro "github.com/shkschneider/macro/core"
-	"github.com/shkschneider/macro/features"
+	plugin "github.com/shkschneider/macro/plugins"
 )
 
 // ====== Command Registration ======
@@ -25,7 +25,7 @@ var BufferSwitcherKeyBinding = key.NewBinding(
 )
 
 func init() {
-	features.RegisterCommand(features.CommandRegistration{
+	plugin.RegisterCommand(plugin.CommandRegistration{
 		Name:           CmdBufferSwitch,
 		Key:            "Ctrl-B",
 		Description:    "Open buffer switcher dialog",

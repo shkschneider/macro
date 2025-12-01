@@ -1,4 +1,4 @@
-package features
+package plugins
 
 import (
 	"sync"
