@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"github.com/charmbracelet/bubbles/key"
@@ -11,36 +11,36 @@ type Command struct {
 	Key         string
 	Description string
 	KeyBinding  key.Binding
-	Execute     func(*model) tea.Cmd
+	Execute     func(*Model) tea.Cmd
 }
 
-var commandRegistry []Command
+var CommandRegistry []Command
 
 // registerCommand adds a command to the global registry
-func registerCommand(cmd Command) {
-	commandRegistry = append(commandRegistry, cmd)
+func RegisterCommand(cmd Command) {
+	CommandRegistry = append(CommandRegistry, cmd)
 }
 
 // getKeybindings returns all registered commands
-func getKeybindings() []Command {
-	return commandRegistry
+func GetKeybindings() []Command {
+	return CommandRegistry
 }
 
 // getCommandByName returns a command by its name
-func getCommandByName(name string) *Command {
-	for i := range commandRegistry {
-		if commandRegistry[i].Name == name {
-			return &commandRegistry[i]
+func GetCommandByName(name string) *Command {
+	for i := range CommandRegistry {
+		if CommandRegistry[i].Name == name {
+			return &CommandRegistry[i]
 		}
 	}
 	return nil
 }
 
 // getCommandByKey returns a command that matches the given key message
-func getCommandByKey(msg tea.KeyMsg) *Command {
-	for i := range commandRegistry {
-		if key.Matches(msg, commandRegistry[i].KeyBinding) {
-			return &commandRegistry[i]
+func GetCommandByKey(msg tea.KeyMsg) *Command {
+	for i := range CommandRegistry {
+		if key.Matches(msg, CommandRegistry[i].KeyBinding) {
+			return &CommandRegistry[i]
 		}
 	}
 	return nil

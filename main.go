@@ -6,25 +6,10 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	plugin "github.com/shkschneider/macro/plugins"
-	// Import vanilla features to trigger their init() registration
+	"github.com/shkschneider/macro/internal"
+	"github.com/shkschneider/macro/plugins"
 	vanilla "github.com/shkschneider/macro/plugins/vanilla"
 )
-
-// ReadOnlyMode defines the mode for read-only handling
-type ReadOnlyMode int
-
-const (
-	// ReadOnlyAuto - detect from file permissions (default)
-	ReadOnlyAuto ReadOnlyMode = iota
-	// ReadOnlyForced - force read-only mode
-	ReadOnlyForced
-	// ReadWriteForced - force read-write mode (if file is writable)
-	ReadWriteForced
-)
-
-// Global read-only mode setting
-var globalReadOnlyMode = ReadOnlyAuto
 
 func main() {
 	// Parse command line flags
@@ -37,36 +22,31 @@ func main() {
 		fmt.Println("Error: Cannot use both -ro and -rw flags")
 		os.Exit(1)
 	}
-	if *forceRO {
-		globalReadOnlyMode = ReadOnlyForced
-	} else if *forceRW {
-		globalReadOnlyMode = ReadWriteForced
-	}
 
 	// Register all feature commands using auto-registration from features registry
-	plugin.Register(func(cmd plugin.CommandRegistration) {
-		var execFunc func(*model) tea.Cmd
+	plugins.Register(func(cmd plugins.CommandRegistration) {
+		var execFunc func(*internal.Model) tea.Cmd
 
 		// Provide execute handlers for commands that need *model access
 		switch cmd.Name {
 		case vanilla.CmdQuit:
-			execFunc = executeQuit
+			execFunc = internal.ExecuteQuit
 		case vanilla.CmdHelp:
-			execFunc = executeCommandPalette
+			execFunc = internal.ExecuteCommandPalette
 		case vanilla.CmdFileOpen:
-			execFunc = executeFileSwitcher
+			execFunc = internal.ExecuteFileSwitcher
 		case vanilla.CmdBufferSwitch:
-			execFunc = executeBufferSwitcher
+			execFunc = internal.ExecuteBufferSwitcher
 		default:
 			// For commands with EditorContext execute (like save)
 			if cmd.PluginExecute != nil {
-				execFunc = func(m *model) tea.Cmd {
+				execFunc = func(m *internal.Model) tea.Cmd {
 					return cmd.PluginExecute(m)
 				}
 			}
 		}
 
-		registerCommand(Command{
+		internal.RegisterCommand(internal.Command{
 			Name:        cmd.Name,
 			Key:         cmd.Key,
 			Description: cmd.Description,
@@ -82,7 +62,7 @@ func main() {
 		filePath = args[0]
 	}
 
-	p := tea.NewProgram(initialModel(filePath), tea.WithAltScreen())
+	p := tea.NewProgram(internal.InitialModel(filePath), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)

@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"path/filepath"
@@ -23,7 +23,7 @@ func (b *Buffer) IsModified() bool {
 }
 
 // moveCursorToTop moves the syntaxTA cursor to position (0,0)
-func (m *model) moveCursorToTop() {
+func (m *Model) moveCursorToTop() {
 	m.syntaxTA.CursorStart()
 	for m.syntaxTA.Line() > 0 {
 		m.syntaxTA.CursorUp()
@@ -31,7 +31,7 @@ func (m *model) moveCursorToTop() {
 }
 
 // loadBuffer loads a buffer's content into the UI (syntaxTA or viewport)
-func (m *model) loadBuffer(idx int) {
+func (m *Model) loadBuffer(idx int) {
 	if idx < 0 || idx >= len(m.buffers) {
 		return
 	}
@@ -81,7 +81,7 @@ func (m *model) loadBuffer(idx int) {
 }
 
 // saveCurrentBufferState saves the current UI state to the current buffer
-func (m *model) saveCurrentBufferState() {
+func (m *Model) saveCurrentBufferState() {
 	if m.currentBuffer < 0 || m.currentBuffer >= len(m.buffers) {
 		return
 	}
@@ -100,7 +100,7 @@ func (m *model) saveCurrentBufferState() {
 }
 
 // addBuffer adds a new buffer or switches to existing one if file already open
-func (m *model) addBuffer(filePath string, content string, readOnly bool, fileSize int64) int {
+func (m *Model) addBuffer(filePath string, content string, readOnly bool, fileSize int64) int {
 	// Check if buffer already exists
 	for i, buf := range m.buffers {
 		if buf.filePath == filePath {
@@ -123,7 +123,7 @@ func (m *model) addBuffer(filePath string, content string, readOnly bool, fileSi
 }
 
 // getCurrentFilePath returns the file path of the current buffer
-func (m *model) getCurrentFilePath() string {
+func (m *Model) getCurrentFilePath() string {
 	if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
 		return m.buffers[m.currentBuffer].filePath
 	}
@@ -131,7 +131,7 @@ func (m *model) getCurrentFilePath() string {
 }
 
 // isCurrentBufferReadOnly returns whether the current buffer is read-only
-func (m *model) isCurrentBufferReadOnly() bool {
+func (m *Model) isCurrentBufferReadOnly() bool {
 	if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
 		return m.buffers[m.currentBuffer].readOnly
 	}
@@ -139,7 +139,7 @@ func (m *model) isCurrentBufferReadOnly() bool {
 }
 
 // isCurrentBufferModified returns whether the current buffer has been modified
-func (m *model) isCurrentBufferModified() bool {
+func (m *Model) isCurrentBufferModified() bool {
 	if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
 		buf := &m.buffers[m.currentBuffer]
 		// For editable buffers, check current textarea content against original
@@ -152,7 +152,7 @@ func (m *model) isCurrentBufferModified() bool {
 }
 
 // getCurrentBuffer returns the current buffer, or nil if none is selected
-func (m *model) getCurrentBuffer() *Buffer {
+func (m *Model) getCurrentBuffer() *Buffer {
 	if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
 		return &m.buffers[m.currentBuffer]
 	}
@@ -160,7 +160,7 @@ func (m *model) getCurrentBuffer() *Buffer {
 }
 
 // getDirectoryPath returns the directory portion of the current file path
-func (m *model) getDirectoryPath() string {
+func (m *Model) getDirectoryPath() string {
 	if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
 		return filepath.Dir(m.buffers[m.currentBuffer].filePath)
 	}
@@ -171,27 +171,27 @@ func (m *model) getDirectoryPath() string {
 // These methods implement api.EditorContext to allow features to interact with the editor
 
 // IsCurrentBufferReadOnly implements api.EditorContext
-func (m *model) IsCurrentBufferReadOnly() bool {
+func (m *Model) IsCurrentBufferReadOnly() bool {
 	return m.isCurrentBufferReadOnly()
 }
 
 // GetCurrentFilePath implements api.EditorContext
-func (m *model) GetCurrentFilePath() string {
+func (m *Model) GetCurrentFilePath() string {
 	return m.getCurrentFilePath()
 }
 
 // GetCurrentContent implements api.EditorContext
-func (m *model) GetCurrentContent() string {
+func (m *Model) GetCurrentContent() string {
 	return m.syntaxTA.Value()
 }
 
 // SaveCurrentBufferState implements api.EditorContext
-func (m *model) SaveCurrentBufferState() {
+func (m *Model) SaveCurrentBufferState() {
 	m.saveCurrentBufferState()
 }
 
 // UpdateBufferAfterSave implements api.EditorContext
-func (m *model) UpdateBufferAfterSave(content string, fileSize int64) {
+func (m *Model) UpdateBufferAfterSave(content string, fileSize int64) {
 	if buf := m.getCurrentBuffer(); buf != nil {
 		buf.originalContent = content
 		buf.fileSize = fileSize
@@ -199,11 +199,11 @@ func (m *model) UpdateBufferAfterSave(content string, fileSize int64) {
 }
 
 // SetMessage implements api.EditorContext
-func (m *model) SetMessage(msg string) {
+func (m *Model) SetMessage(msg string) {
 	m.message = msg
 }
 
 // SetError implements api.EditorContext
-func (m *model) SetError(err error) {
+func (m *Model) SetError(err error) {
 	m.err = err
 }
