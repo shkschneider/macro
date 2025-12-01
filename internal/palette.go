@@ -9,7 +9,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sahilm/fuzzy"
 	"github.com/shkschneider/macro/api"
-	plugin "github.com/shkschneider/macro/plugins"
 )
 
 // ====== Command Registration ======
@@ -24,11 +23,11 @@ var PaletteKeyBinding = key.NewBinding(
 )
 
 func init() {
-	plugin.RegisterCommand(plugin.CommandRegistration{
-		Name:           CmdPalette,
-		Key:            "Ctrl-Space",
-		Description:    "Show command palette",
-		KeyBinding:     PaletteKeyBinding,
+	api.RegisterCommand(api.CommandRegistration{
+		Name:          CmdPalette,
+		Key:           "Ctrl-Space",
+		Description:   "Show command palette",
+		KeyBinding:    PaletteKeyBinding,
 		PluginExecute: nil, // Main app provides execute handler
 	})
 }

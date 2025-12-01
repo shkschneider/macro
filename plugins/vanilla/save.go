@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/shkschneider/macro/api"
-	plugin "github.com/shkschneider/macro/plugins"
 )
 
 // CmdSave is the command name constant for save
@@ -20,12 +19,12 @@ var SaveKeyBinding = key.NewBinding(
 )
 
 func init() {
-	plugin.RegisterCommand(plugin.CommandRegistration{
-		Name:           CmdSave,
-		Key:            "Ctrl-S",
-		Description:    "Save current buffer to disk",
-		KeyBinding:     SaveKeyBinding,
-		PluginExecute: executeSave, // Plugin provides execute handler
+	api.RegisterCommand(api.CommandRegistration{
+		Name:          CmdSave,
+		Key:           "Ctrl-S",
+		Description:   "Save current buffer to disk",
+		KeyBinding:    SaveKeyBinding,
+		PluginExecute: executeSave,
 	})
 }
 

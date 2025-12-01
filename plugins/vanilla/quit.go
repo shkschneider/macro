@@ -4,7 +4,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/shkschneider/macro/api"
-	plugin "github.com/shkschneider/macro/plugins"
 )
 
 // CmdQuit is the command name constant for quit
@@ -17,7 +16,7 @@ var QuitKeyBinding = key.NewBinding(
 )
 
 func init() {
-	plugin.RegisterCommand(plugin.CommandRegistration{
+	api.RegisterCommand(api.CommandRegistration{
 		Name:          CmdQuit,
 		Key:           "Ctrl-Q",
 		Description:   "Quit the editor",

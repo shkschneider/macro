@@ -11,7 +11,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sahilm/fuzzy"
 	"github.com/shkschneider/macro/api"
-	plugin "github.com/shkschneider/macro/plugins"
 )
 
 // ====== Command Registration ======
@@ -26,7 +25,7 @@ var FileSwitcherKeyBinding = key.NewBinding(
 )
 
 func init() {
-	plugin.RegisterCommand(plugin.CommandRegistration{
+	api.RegisterCommand(api.CommandRegistration{
 		Name:          CmdFileOpen,
 		Key:           "Ctrl-P",
 		Description:   "Open file switcher",

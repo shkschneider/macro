@@ -6,8 +6,9 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/shkschneider/macro/api"
 	"github.com/shkschneider/macro/internal"
-	"github.com/shkschneider/macro/plugins"
+	_ "github.com/shkschneider/macro/plugins/vanilla" // Import to trigger init()
 )
 
 func main() {
@@ -22,8 +23,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Register all feature commands using auto-registration from features registry
-	plugins.Register(func(cmd plugins.CommandRegistration) {
+	// Register all feature commands using auto-registration from api registry
+	api.Register(func(cmd api.CommandRegistration) {
 		var execFunc func(*internal.Model) tea.Cmd
 
 		// Special case: Help command needs access to CommandRegistry
