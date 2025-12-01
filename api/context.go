@@ -20,6 +20,9 @@ type EditorContext interface {
 	UpdateBufferAfterSave(content string, fileSize int64)
 	GetBuffers() []BufferInfo
 	GetCurrentBufferIndex() int
+	HasUnsavedChanges() bool
+	IsCurrentBufferModified() bool
+	CloseCurrentBuffer() bool // Returns true if this was the last buffer
 
 	// Buffer management
 	OpenFile(path string) error
@@ -37,4 +40,7 @@ type EditorContext interface {
 
 	// Command operations
 	ExecuteCommand(name string) tea.Cmd
+
+	// File picker operations
+	ShowFilePicker(directory string)
 }

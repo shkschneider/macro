@@ -227,6 +227,19 @@ func (m *Model) GetCurrentBufferIndex() int {
 	return m.CurrentBuffer
 }
 
+// HasUnsavedChanges implements api.EditorContext - returns true if any buffer has unsaved changes
+func (m *Model) HasUnsavedChanges() bool {
+	// First, save current buffer state to ensure we're checking latest content
+	m.saveCurrentBufferState()
+	
+	for _, buf := range m.Buffers {
+		if !buf.ReadOnly && buf.IsModified() {
+			return true
+		}
+	}
+	return false
+}
+
 // SetActiveDialog implements api.EditorContext
 func (m *Model) SetActiveDialog(dialog api.Dialog) tea.Cmd {
 	m.ActiveDialog = dialog
@@ -275,4 +288,41 @@ func (m *Model) ExecuteCommand(name string) tea.Cmd {
 		return cmd.Execute(m)
 	}
 	return nil
+}
+
+// IsCurrentBufferModified implements api.EditorContext - returns true if current buffer has unsaved changes
+func (m *Model) IsCurrentBufferModified() bool {
+	return m.isCurrentBufferModified()
+}
+
+// CloseCurrentBuffer implements api.EditorContext - closes the current buffer
+// Returns true if this was the last buffer (no more buffers remain)
+func (m *Model) CloseCurrentBuffer() bool {
+	if m.CurrentBuffer < 0 || m.CurrentBuffer >= len(m.Buffers) {
+		return true // No buffer to close
+	}
+
+	// Remove the current buffer
+	m.Buffers = append(m.Buffers[:m.CurrentBuffer], m.Buffers[m.CurrentBuffer+1:]...)
+
+	// Check if no buffers remain
+	if len(m.Buffers) == 0 {
+		m.CurrentBuffer = -1
+		return true
+	}
+
+	// Adjust current buffer index
+	if m.CurrentBuffer >= len(m.Buffers) {
+		m.CurrentBuffer = len(m.Buffers) - 1
+	}
+
+	// Load the new current buffer
+	m.loadBuffer(m.CurrentBuffer)
+	return false
+}
+
+// ShowFilePicker implements api.EditorContext - shows the file picker in the given directory
+func (m *Model) ShowFilePicker(directory string) {
+	m.Filepicker.CurrentDirectory = directory
+	m.ShowPicker = true
 }
