@@ -1,51 +1,9 @@
-// Package api provides the public API for macro plugins.
-// This package contains only the types and interfaces that plugins need to implement.
 package api
 
 import (
-	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
-
-// CommandDef defines a command without execution logic
-type CommandDef struct {
-	Name        string
-	Key         string
-	Description string
-	KeyBinding  key.Binding
-}
-
-// BufferInfo contains information about a buffer for dialogs
-type BufferInfo struct {
-	FilePath string
-	ReadOnly bool
-}
-
-// EditorContext provides an interface for plugins to interact with the editor.
-// This allows plugins to define their own execution logic without depending on
-// the main package's model type directly.
-type EditorContext interface {
-	// Buffer operations
-	IsCurrentBufferReadOnly() bool
-	GetCurrentFilePath() string
-	GetCurrentContent() string
-	SaveCurrentBufferState()
-	UpdateBufferAfterSave(content string, fileSize int64)
-
-	// Message operations
-	SetMessage(msg string)
-	SetError(err error)
-}
-
-// PluginCommand represents a command with its execution logic defined by a plugin
-type PluginCommand struct {
-	Name        string
-	Key         string
-	Description string
-	KeyBinding  key.Binding
-	Execute     func(ctx EditorContext) tea.Cmd
-}
 
 // Dialog interface defines the contract for all dialogs
 type Dialog interface {
