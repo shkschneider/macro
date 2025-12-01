@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	defaultMessage = "Macro v0.12.0 | Hit Ctrl-Space for Command Palette."
+	defaultMessage = "Macro v0.12.0 | Hit Ctrl-Space for command input."
 	TermWidth      = 0 // Will be updated on WindowSizeMsg
 	TermHeight     = 0 // Will be updated on WindowSizeMsg
 )
@@ -135,6 +135,31 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
+	// If command input is active, handle command input messages
+	if m.CommandInput != nil && m.CommandInput.IsActive() {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyEscape:
+				// Escape deactivates command input and returns focus to editor
+				m.CommandInput.Deactivate()
+				return m, m.Textarea.Focus()
+			case tea.KeyEnter:
+				// Execute the command and deactivate input
+				cmdText := m.CommandInput.Value()
+				m.CommandInput.Deactivate()
+				// Execute the command
+				if cmdText != "" {
+					return m, m.executeCommandInput(cmdText)
+				}
+				return m, m.Textarea.Focus()
+			}
+		}
+		// Pass other messages to the command input
+		m.CommandInput, cmd = m.CommandInput.Update(msg)
+		return m, cmd
+	}
+
 	// Handle plugin messages using the PluginMsg interface
 	// This allows plugins to define their own message types without
 	// the main app needing to know about them in a switch statement
@@ -197,23 +222,33 @@ func (m Model) View() string {
 	// Build status bar with file info
 	statusBar := m.BuildStatusBar()
 
-	// Message line for warnings/errors/info
-	var messageLine string
-	if m.Err != nil {
-		messageLine = ErrorStyle.Render(m.Message)
-	} else if strings.Contains(m.Message, "WARNING") || strings.Contains(m.Message, "read-only") {
-		messageLine = WarningStyle.Render(m.Message)
-	} else if m.Message != defaultMessage {
-		messageLine = SuccessStyle.Render(m.Message)
+	// Command input / message line - use CommandInput component for both modes
+	var commandLine string
+	if m.CommandInput != nil {
+		// Sync the message with the command input component
+		m.CommandInput.SetMessage(m.Message)
+		// Determine styling flags
+		isWarning := strings.Contains(m.Message, "WARNING") || strings.Contains(m.Message, "read-only")
+		isSuccess := m.Message != defaultMessage && m.Err == nil && !isWarning
+		commandLine = m.CommandInput.View(TermWidth, m.Err, isWarning, isSuccess)
 	} else {
-		messageLine = MessageStyle.Render(m.Message)
+		// Fallback to old rendering if CommandInput is nil
+		if m.Err != nil {
+			commandLine = ErrorStyle.Render(m.Message)
+		} else if strings.Contains(m.Message, "WARNING") || strings.Contains(m.Message, "read-only") {
+			commandLine = WarningStyle.Render(m.Message)
+		} else if m.Message != defaultMessage {
+			commandLine = SuccessStyle.Render(m.Message)
+		} else {
+			commandLine = MessageStyle.Render(m.Message)
+		}
 	}
 
 	baseView := fmt.Sprintf(
 		"%s\n%s\n%s",
 		contentView,
 		statusBar,
-		messageLine,
+		commandLine,
 	)
 
 	// If showing dialog, overlay it on top of the base view
@@ -223,4 +258,37 @@ func (m Model) View() string {
 	}
 
 	return baseView
+}
+
+// executeCommandInput parses and executes a command from the command input line.
+// It supports both direct command names and arguments.
+func (m *Model) executeCommandInput(input string) tea.Cmd {
+	// Trim whitespace
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return m.Textarea.Focus()
+	}
+
+	// Split the input into command and arguments
+	parts := strings.Fields(input)
+	cmdName := parts[0]
+
+	// Try to find a command by name
+	cmd := GetCommandByName(cmdName)
+	if cmd != nil && cmd.Execute != nil {
+		return cmd.Execute(m)
+	}
+
+	// If no exact match, try partial matching
+	for _, cmd := range GetCommands() {
+		if strings.Contains(strings.ToLower(cmd.Name), strings.ToLower(cmdName)) {
+			if cmd.Execute != nil {
+				return cmd.Execute(m)
+			}
+		}
+	}
+
+	// Command not found
+	m.Message = fmt.Sprintf("Unknown command: %s", cmdName)
+	return m.Textarea.Focus()
 }

@@ -14,11 +14,17 @@ func TestCmdPalette_Constant(t *testing.T) {
 	}
 }
 
-func TestPaletteKeyBinding(t *testing.T) {
-	// Test that ctrl+@ (ctrl+space) matches the binding
+func TestCmdCommandInput_Constant(t *testing.T) {
+	if CmdCommandInput != "command-input" {
+		t.Errorf("CmdCommandInput should be 'command-input', got '%s'", CmdCommandInput)
+	}
+}
+
+func TestCommandInputKeyBinding(t *testing.T) {
+	// Test that ctrl+@ (ctrl+space) matches the command input binding
 	msg := tea.KeyMsg{Type: tea.KeyCtrlAt}
-	if !key.Matches(msg, PaletteKeyBinding) {
-		t.Error("Ctrl+@ (Ctrl+Space) should match PaletteKeyBinding")
+	if !key.Matches(msg, CommandInputKeyBinding) {
+		t.Error("Ctrl+@ (Ctrl+Space) should match CommandInputKeyBinding")
 	}
 }
 

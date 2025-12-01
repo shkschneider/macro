@@ -13,14 +13,32 @@ import (
 
 // ====== Command Registration ======
 
+// CmdCommandInput is the command name constant for focusing command input
+const CmdCommandInput = "command-input"
+
 // CmdPalette is the command name constant for help/command palette
 const CmdPalette = "help-show"
 
-// PaletteKeyBinding is the key binding for the command palette
-var PaletteKeyBinding = key.NewBinding(
+// CommandInputKeyBinding is the key binding for the command input line
+var CommandInputKeyBinding = key.NewBinding(
 	key.WithKeys("ctrl+@", "ctrl+ "), // ctrl+@ is what ctrl+space sends
-	key.WithHelp("ctrl+space", "open command palette"),
+	key.WithHelp("ctrl+space", "focus command input"),
 )
+
+// PaletteKeyBinding is the key binding for the command palette (can be invoked from command input)
+var PaletteKeyBinding = key.NewBinding(
+	key.WithKeys("ctrl+shift+p"),
+	key.WithHelp("ctrl+shift+p", "open command palette"),
+)
+
+// ExecuteCommandInput focuses the command input line for typing commands.
+func ExecuteCommandInput(m *Model) tea.Cmd {
+	if m.CommandInput != nil {
+		m.CommandInput.SetWidth(TermWidth)
+		return m.CommandInput.Activate()
+	}
+	return nil
+}
 
 func ExecuteCommandPalette(m *Model) tea.Cmd {
 	// Get all commands
@@ -37,9 +55,19 @@ func ExecuteCommandPalette(m *Model) tea.Cmd {
 }
 
 func init() {
+	// Register command input activation (Ctrl-Space)
+	api.RegisterCommand(api.CommandRegistration{
+		Name:          CmdCommandInput,
+		Key:           "Ctrl-Space",
+		Description:   "Focus command input",
+		KeyBinding:    CommandInputKeyBinding,
+		PluginExecute: nil, // Main app provides execute handler
+	})
+	
+	// Register command palette (accessible from command input)
 	api.RegisterCommand(api.CommandRegistration{
 		Name:          CmdPalette,
-		Key:           "Ctrl-Space",
+		Key:           "Ctrl-Shift-P",
 		Description:   "Show command palette",
 		KeyBinding:    PaletteKeyBinding,
 		PluginExecute: nil, // Main app provides execute handler
