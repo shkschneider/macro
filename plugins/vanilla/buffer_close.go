@@ -45,16 +45,17 @@ func ExecuteBufferClose(ctx api.EditorContext) tea.Cmd {
 
 // closeBufferNow performs the actual buffer close operation
 func closeBufferNow(ctx api.EditorContext) tea.Cmd {
-	// Get directory before closing (for file picker if needed)
+	// Get directory before closing (for file dialog if needed)
 	dir := filepath.Dir(ctx.GetCurrentFilePath())
 
 	// Close the buffer
 	wasLastBuffer := ctx.CloseCurrentBuffer()
 
 	if wasLastBuffer {
-		// Show file picker in the directory of the closed file
+		// Show file dialog in the directory of the closed file
 		ctx.SetMessage("Last buffer closed. Select a file to open.")
-		return ctx.ShowFilePicker(dir)
+		dialog := NewFileDialog(dir)
+		return ctx.SetActiveDialog(dialog)
 	}
 	
 	ctx.SetMessage("Buffer closed")

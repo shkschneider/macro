@@ -40,7 +40,4 @@ type EditorContext interface {
 
 	// Command operations
 	ExecuteCommand(name string) tea.Cmd
-
-	// File picker operations
-	ShowFilePicker(directory string) tea.Cmd
 }
