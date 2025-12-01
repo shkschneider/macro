@@ -53,12 +53,11 @@ func closeBufferNow(ctx api.EditorContext) tea.Cmd {
 
 	if wasLastBuffer {
 		// Show file picker in the directory of the closed file
-		ctx.ShowFilePicker(dir)
 		ctx.SetMessage("Last buffer closed. Select a file to open.")
-	} else {
-		ctx.SetMessage("Buffer closed")
+		return ctx.ShowFilePicker(dir)
 	}
-
+	
+	ctx.SetMessage("Buffer closed")
 	return nil
 }
 

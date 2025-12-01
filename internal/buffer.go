@@ -322,7 +322,8 @@ func (m *Model) CloseCurrentBuffer() bool {
 }
 
 // ShowFilePicker implements api.EditorContext - shows the file picker in the given directory
-func (m *Model) ShowFilePicker(directory string) {
+func (m *Model) ShowFilePicker(directory string) tea.Cmd {
 	m.Filepicker.CurrentDirectory = directory
 	m.ShowPicker = true
+	return m.Filepicker.Init()
 }
