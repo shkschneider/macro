@@ -23,6 +23,7 @@ type Model struct {
 	ShowPicker    bool
 	ActiveDialog  api.Dialog        // Single active dialog (nil when closed)
 	CursorState   *CursorState // Persistent cursor position storage
+	CommandInput  *CommandInput // Command input line at bottom of editor
 }
 
 func InitialModel(filePath string) Model {
@@ -35,6 +36,8 @@ func InitialModel(filePath string) Model {
 
 	vp := viewport.New(80, 24)
 
+	ci := NewCommandInput()
+
 	m := Model{
 		Textarea:      ta,
 		Viewport:      vp,
@@ -46,6 +49,7 @@ func InitialModel(filePath string) Model {
 		ShowPicker:    false,
 		ActiveDialog:  nil,
 		CursorState:   NewCursorState(),
+		CommandInput:  ci,
 	}
 
 	if filePath != "" {

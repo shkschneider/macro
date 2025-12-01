@@ -46,11 +46,11 @@ func TestFeatureKeyBinding_BufferSwitch(t *testing.T) {
 	}
 }
 
-func TestFeatureKeyBinding_CommandPalette(t *testing.T) {
+func TestFeatureKeyBinding_CommandInput(t *testing.T) {
 	// Test ctrl+@ (which is what ctrl+space sends)
 	msg := tea.KeyMsg{Type: tea.KeyCtrlAt}
-	if !key.Matches(msg, PaletteKeyBinding) {
-		t.Error("Ctrl+@ (Ctrl+Space) should match CommandPalette binding")
+	if !key.Matches(msg, CommandInputKeyBinding) {
+		t.Error("Ctrl+@ (Ctrl+Space) should match CommandInput binding")
 	}
 }
 
@@ -62,7 +62,7 @@ func TestFeatureKeyBindings_AllHaveHelp(t *testing.T) {
 	}{
 		{"Quit", vanilla.QuitKeyBinding},
 		{"Save", vanilla.SaveKeyBinding},
-		{"CommandPalette", PaletteKeyBinding},
+		{"CommandInput", CommandInputKeyBinding},
 		{"FileOpen", vanilla.FileSwitcherKeyBinding},
 		{"BufferSwitch", vanilla.BufferSwitcherKeyBinding},
 	}

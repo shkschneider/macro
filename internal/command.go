@@ -40,6 +40,10 @@ func RegisterFromAPI() {
 
 // wrapPluginExecute wraps an api command's PluginExecute to work with *Model.
 func wrapPluginExecute(cmd api.CommandRegistration) func(*Model) tea.Cmd {
+	// Special case: Command input needs access to Model's CommandInput
+	if cmd.Name == CmdCommandInput {
+		return ExecuteCommandInput
+	}
 	// Special case: Command palette needs access to CommandRegistry
 	if cmd.Name == CmdPalette {
 		return ExecuteCommandPalette
