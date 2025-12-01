@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	api "github.com/shkschneider/macro/api"
+	"github.com/shkschneider/macro/api"
 )
 
 // mockEditorContext implements core.EditorContext for testing

@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/shkschneider/macro/core"
-	vanilla "github.com/shkschneider/macro/plugins/vanilla"
+	"github.com/shkschneider/macro/plugins/vanilla"
 )
 
 var (
@@ -32,6 +32,22 @@ const (
 
 // Global read-only mode setting
 var globalReadOnlyMode = ReadOnlyAuto
+
+// determineReadOnly determines the read-only state based on file info and CLI flags
+func determineReadOnly(info os.FileInfo) bool {
+	// Check file permissions
+	fileIsWritable := info.Mode()&0200 != 0
+
+	switch globalReadOnlyMode {
+	case ReadOnlyForced:
+		return true
+	case ReadWriteForced:
+		// Only allow read-write if file is actually writable
+		return !fileIsWritable
+	default: // ReadOnlyAuto
+		return !fileIsWritable
+	}
+}
 
 func (m Model) Init() tea.Cmd {
 	if m.showPicker {

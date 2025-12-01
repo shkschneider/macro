@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	api "github.com/shkschneider/macro/api"
+	"github.com/shkschneider/macro/api"
 	plugin "github.com/shkschneider/macro/plugins"
 )
 

@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/shkschneider/macro/internal"
 	"github.com/shkschneider/macro/plugins"
-	vanilla "github.com/shkschneider/macro/plugins/vanilla"
+	"github.com/shkschneider/macro/plugins/vanilla"
 )
 
 func main() {

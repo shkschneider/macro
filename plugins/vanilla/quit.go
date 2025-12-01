@@ -2,7 +2,7 @@ package vanilla
 
 import (
 	"github.com/charmbracelet/bubbles/key"
-	api "github.com/shkschneider/macro/api"
+	"github.com/shkschneider/macro/api"
 	plugin "github.com/shkschneider/macro/plugins"
 )
 

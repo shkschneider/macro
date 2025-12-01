@@ -5,7 +5,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	api "github.com/shkschneider/macro/api"
+	"github.com/shkschneider/macro/api"
 )
 
 // CommandRegistration represents a command to be registered with the main app

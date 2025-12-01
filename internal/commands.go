@@ -1,12 +1,11 @@
 package internal
 
 import (
-	"os"
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/shkschneider/macro/api"
-	vanilla "github.com/shkschneider/macro/plugins/vanilla"
+	"github.com/shkschneider/macro/plugins/vanilla"
 )
 
 // executeQuit quits the editor
@@ -60,20 +59,4 @@ func ExecuteCommandPalette(m *Model) tea.Cmd {
 	}
 	m.activeDialog = vanilla.NewHelpDialog(commands)
 	return m.activeDialog.Init()
-}
-
-// determineReadOnly determines the read-only state based on file info and CLI flags
-func determineReadOnly(info os.FileInfo) bool {
-	// Check file permissions
-	fileIsWritable := info.Mode()&0200 != 0
-
-	switch globalReadOnlyMode {
-	case ReadOnlyForced:
-		return true
-	case ReadWriteForced:
-		// Only allow read-write if file is actually writable
-		return !fileIsWritable
-	default: // ReadOnlyAuto
-		return !fileIsWritable
-	}
 }

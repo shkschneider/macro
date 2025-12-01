@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sahilm/fuzzy"
-	api "github.com/shkschneider/macro/api"
+	"github.com/shkschneider/macro/api"
 	plugin "github.com/shkschneider/macro/plugins"
 )
 
