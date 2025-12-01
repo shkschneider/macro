@@ -5,19 +5,24 @@ import (
 	"path/filepath"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/shkschneider/macro/api"
 )
 
 // mockEditorContext implements core.EditorContext for testing
 type mockEditorContext struct {
-	readOnly    bool
-	filePath    string
-	content     string
-	message     string
-	err         error
-	savedState  bool
+	readOnly       bool
+	filePath       string
+	content        string
+	message        string
+	err            error
+	savedState     bool
 	updatedContent string
 	updatedSize    int64
+	buffers        []api.BufferInfo
+	currentBuffer  int
+	activeDialog   api.Dialog
+	cursorSaved    bool
 }
 
 func (m *mockEditorContext) IsCurrentBufferReadOnly() bool {
@@ -47,6 +52,26 @@ func (m *mockEditorContext) SetMessage(msg string) {
 
 func (m *mockEditorContext) SetError(err error) {
 	m.err = err
+}
+
+func (m *mockEditorContext) GetBuffers() []api.BufferInfo {
+	return m.buffers
+}
+
+func (m *mockEditorContext) GetCurrentBufferIndex() int {
+	return m.currentBuffer
+}
+
+func (m *mockEditorContext) SetActiveDialog(dialog api.Dialog) tea.Cmd {
+	m.activeDialog = dialog
+	if dialog != nil {
+		return dialog.Init()
+	}
+	return nil
+}
+
+func (m *mockEditorContext) SaveCursorState() {
+	m.cursorSaved = true
 }
 
 // Verify mockEditorContext implements EditorContext

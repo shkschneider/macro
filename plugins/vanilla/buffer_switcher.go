@@ -26,12 +26,23 @@ var BufferSwitcherKeyBinding = key.NewBinding(
 
 func init() {
 	plugin.RegisterCommand(plugin.CommandRegistration{
-		Name:           CmdBufferSwitch,
-		Key:            "Ctrl-B",
-		Description:    "Open buffer switcher dialog",
-		KeyBinding:     BufferSwitcherKeyBinding,
-		PluginExecute: nil, // Main app provides execute handler
+		Name:          CmdBufferSwitch,
+		Key:           "Ctrl-B",
+		Description:   "Open buffer switcher dialog",
+		KeyBinding:    BufferSwitcherKeyBinding,
+		PluginExecute: ExecuteBufferSwitcher,
 	})
+}
+
+// ExecuteBufferSwitcher opens the buffer switcher dialog
+func ExecuteBufferSwitcher(ctx api.EditorContext) tea.Cmd {
+	buffers := ctx.GetBuffers()
+	if len(buffers) > 0 {
+		dialog := NewBufferDialog(buffers, ctx.GetCurrentBufferIndex())
+		return ctx.SetActiveDialog(dialog)
+	}
+	ctx.SetMessage("No buffers open")
+	return nil
 }
 
 // BufferSwitcherCommand returns the command definition for buffer switching

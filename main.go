@@ -27,22 +27,13 @@ func main() {
 	plugins.Register(func(cmd plugins.CommandRegistration) {
 		var execFunc func(*internal.Model) tea.Cmd
 
-		// Provide execute handlers for commands that need *model access
-		switch cmd.Name {
-		case vanilla.CmdQuit:
-			execFunc = internal.ExecuteQuit
-		case vanilla.CmdHelp:
+		// Special case: Help command needs access to CommandRegistry
+		if cmd.Name == vanilla.CmdHelp {
 			execFunc = internal.ExecuteCommandPalette
-		case vanilla.CmdFileOpen:
-			execFunc = internal.ExecuteFileSwitcher
-		case vanilla.CmdBufferSwitch:
-			execFunc = internal.ExecuteBufferSwitcher
-		default:
-			// For commands with EditorContext execute (like save)
-			if cmd.PluginExecute != nil {
-				execFunc = func(m *internal.Model) tea.Cmd {
-					return cmd.PluginExecute(m)
-				}
+		} else if cmd.PluginExecute != nil {
+			// Use the plugin's execute function via EditorContext
+			execFunc = func(m *internal.Model) tea.Cmd {
+				return cmd.PluginExecute(m)
 			}
 		}
 

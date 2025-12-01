@@ -27,12 +27,23 @@ var FileSwitcherKeyBinding = key.NewBinding(
 
 func init() {
 	plugin.RegisterCommand(plugin.CommandRegistration{
-		Name:           CmdFileOpen,
-		Key:            "Ctrl-P",
-		Description:    "Open file switcher",
-		KeyBinding:     FileSwitcherKeyBinding,
-		PluginExecute: nil, // Main app provides execute handler
+		Name:          CmdFileOpen,
+		Key:           "Ctrl-P",
+		Description:   "Open file switcher",
+		KeyBinding:    FileSwitcherKeyBinding,
+		PluginExecute: ExecuteFileSwitcher,
 	})
+}
+
+// ExecuteFileSwitcher opens the file switcher dialog
+func ExecuteFileSwitcher(ctx api.EditorContext) tea.Cmd {
+	filePath := ctx.GetCurrentFilePath()
+	if filePath != "" {
+		dialog := NewFileDialog(filepath.Dir(filePath))
+		return ctx.SetActiveDialog(dialog)
+	}
+	ctx.SetMessage("No file open to determine directory")
+	return nil
 }
 
 // FileSwitcherCommand returns the command definition for file switching

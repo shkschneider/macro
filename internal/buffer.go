@@ -3,6 +3,8 @@ package internal
 import (
 	"path/filepath"
 
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/shkschneider/macro/api"
 )
 
 // Buffer represents an open file with its state
@@ -205,4 +207,37 @@ func (m *Model) SetMessage(msg string) {
 // SetError implements api.EditorContext
 func (m *Model) SetError(err error) {
 	m.Err = err
+}
+
+// GetBuffers implements api.EditorContext
+func (m *Model) GetBuffers() []api.BufferInfo {
+	var bufferInfos []api.BufferInfo
+	for _, buf := range m.Buffers {
+		bufferInfos = append(bufferInfos, api.BufferInfo{
+			FilePath: buf.FilePath,
+			ReadOnly: buf.ReadOnly,
+		})
+	}
+	return bufferInfos
+}
+
+// GetCurrentBufferIndex implements api.EditorContext
+func (m *Model) GetCurrentBufferIndex() int {
+	return m.CurrentBuffer
+}
+
+// SetActiveDialog implements api.EditorContext
+func (m *Model) SetActiveDialog(dialog api.Dialog) tea.Cmd {
+	m.ActiveDialog = dialog
+	if dialog != nil {
+		return dialog.Init()
+	}
+	return nil
+}
+
+// SaveCursorState implements api.EditorContext
+func (m *Model) SaveCursorState() {
+	if m.CursorState != nil {
+		_ = m.CursorState.Save()
+	}
 }

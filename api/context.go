@@ -1,5 +1,7 @@
 package api
 
+import tea "github.com/charmbracelet/bubbletea"
+
 // EditorContext provides an interface for plugins to interact with the editor.
 // This allows plugins to define their own execution logic without depending on
 // the main package's model type directly.
@@ -10,8 +12,16 @@ type EditorContext interface {
 	GetCurrentContent() string
 	SaveCurrentBufferState()
 	UpdateBufferAfterSave(content string, fileSize int64)
+	GetBuffers() []BufferInfo
+	GetCurrentBufferIndex() int
 
 	// Message operations
 	SetMessage(msg string)
 	SetError(err error)
+
+	// Dialog operations
+	SetActiveDialog(dialog Dialog) tea.Cmd
+	
+	// Cursor state operations
+	SaveCursorState()
 }
