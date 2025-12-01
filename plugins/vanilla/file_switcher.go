@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sahilm/fuzzy"
-	macro "github.com/shkschneider/macro/core"
+	api "github.com/shkschneider/macro/api"
 	plugin "github.com/shkschneider/macro/plugins"
 )
 
@@ -36,8 +36,8 @@ func init() {
 }
 
 // FileSwitcherCommand returns the command definition for file switching
-func FileSwitcherCommand() macro.CommandDef {
-	return macro.CommandDef{
+func FileSwitcherCommand() api.CommandDef {
+	return api.CommandDef{
 		Name:        CmdFileOpen,
 		Key:         "Ctrl-P",
 		Description: "Open file switcher",
@@ -140,7 +140,7 @@ func (d *FileDialog) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (d *FileDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
+func (d *FileDialog) Update(msg tea.Msg) (api.Dialog, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if key.Matches(msg, DefaultFileDialogKeyMap.Close) {
@@ -258,11 +258,11 @@ func (d *FileDialog) View(termWidth, termHeight int) string {
 		file := d.filteredFiles[i]
 		line := ""
 		if i == d.selectedIdx {
-			line = macro.DialogHighlightedStyle.
+			line = api.DialogHighlightedStyle.
 				Width(dialogWidth - 4).
 				Render("> " + file.name)
 		} else {
-			line = macro.DialogItemStyle.
+			line = api.DialogItemStyle.
 				Width(dialogWidth - 4).
 				Render("  " + file.name)
 		}
@@ -274,21 +274,21 @@ func (d *FileDialog) View(termWidth, termHeight int) string {
 		fileListView.WriteString(strings.Repeat(" ", dialogWidth-4) + "\n")
 	}
 
-	title := macro.DialogTitleStyle.Render("File Switcher")
+	title := api.DialogTitleStyle.Render("File Switcher")
 	fileCount := fmt.Sprintf("(%d/%d files)", len(d.filteredFiles), len(d.allFiles))
-	titleLine := macro.DialogTitleLineStyle.
+	titleLine := api.DialogTitleLineStyle.
 		Width(dialogWidth - 4).
-		Render(title + " " + macro.DialogCountStyle.Render(fileCount))
+		Render(title + " " + api.DialogCountStyle.Render(fileCount))
 
-	separator := macro.DialogSeparatorStyle.
+	separator := api.DialogSeparatorStyle.
 		Render(strings.Repeat("─", dialogWidth-4))
 
-	inputLabel := macro.DialogInputLabelStyle.
+	inputLabel := api.DialogInputLabelStyle.
 		Render("Filter: ")
 
 	inputView := inputLabel + d.filterInput.View()
 
-	instructions := macro.DialogInstructionsStyle.
+	instructions := api.DialogInstructionsStyle.
 		Render("↑/↓: Navigate | Enter: Open | Esc: Close")
 
 	fullContent := fmt.Sprintf("%s\n%s\n%s\n%s\n%s",
@@ -299,7 +299,7 @@ func (d *FileDialog) View(termWidth, termHeight int) string {
 		instructions,
 	)
 
-	return macro.DialogBoxStyle.Render(fullContent)
+	return api.DialogBoxStyle.Render(fullContent)
 }
 
 func (d *FileDialog) IsVisible() bool {

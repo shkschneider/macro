@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	macro "github.com/shkschneider/macro/core"
+	api "github.com/shkschneider/macro/api"
 	plugin "github.com/shkschneider/macro/plugins"
 )
 
@@ -30,8 +30,8 @@ func init() {
 }
 
 // SaveCommand returns the command definition for saving files with execution logic
-func SaveCommand() macro.FeatureCommand {
-	return macro.FeatureCommand{
+func SaveCommand() api.PluginCommand {
+	return api.PluginCommand{
 		Name:        CmdSave,
 		Key:         "Ctrl-S",
 		Description: "Save current buffer to disk",
@@ -41,7 +41,7 @@ func SaveCommand() macro.FeatureCommand {
 }
 
 // executeSave saves the current buffer to disk
-func executeSave(ctx macro.EditorContext) tea.Cmd {
+func executeSave(ctx api.EditorContext) tea.Cmd {
 	if ctx.IsCurrentBufferReadOnly() {
 		ctx.SetMessage("WARNING: Cannot save - file is read-only")
 		return nil

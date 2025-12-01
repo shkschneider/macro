@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sahilm/fuzzy"
-	macro "github.com/shkschneider/macro/core"
+	api "github.com/shkschneider/macro/api"
 	plugin "github.com/shkschneider/macro/plugins"
 )
 
@@ -34,8 +34,8 @@ func init() {
 }
 
 // HelpCommand returns the command definition for showing help
-func HelpCommand() macro.CommandDef {
-	return macro.CommandDef{
+func HelpCommand() api.CommandDef {
+	return api.CommandDef{
 		Name:        CmdHelp,
 		Key:         "Ctrl-Space",
 		Description: "Show command palette",
@@ -84,7 +84,7 @@ var DefaultHelpDialogKeyMap = HelpDialogKeyMap{
 
 // commandItem is used internally by HelpDialog
 type commandItem struct {
-	command macro.CommandDef
+	command api.CommandDef
 }
 
 // ====== Dialog Implementation ======
@@ -100,7 +100,7 @@ type HelpDialog struct {
 }
 
 // NewHelpDialog creates a new help dialog
-func NewHelpDialog(commands []macro.CommandDef) *HelpDialog {
+func NewHelpDialog(commands []api.CommandDef) *HelpDialog {
 	ti := textinput.New()
 	ti.Placeholder = "Type to filter commands..."
 	ti.CharLimit = 100
@@ -128,7 +128,7 @@ func (d *HelpDialog) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (d *HelpDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
+func (d *HelpDialog) Update(msg tea.Msg) (api.Dialog, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if key.Matches(msg, DefaultHelpDialogKeyMap.Close) {
@@ -247,11 +247,11 @@ func (d *HelpDialog) View(termWidth, termHeight int) string {
 		cmdText := fmt.Sprintf("%-20s %-12s %s", cmd.command.Name, cmd.command.Key, cmd.command.Description)
 		line := ""
 		if i == d.selectedIdx {
-			line = macro.DialogHighlightedStyle.
+			line = api.DialogHighlightedStyle.
 				Width(dialogWidth - 4).
 				Render("> " + cmdText)
 		} else {
-			line = macro.DialogItemStyle.
+			line = api.DialogItemStyle.
 				Width(dialogWidth - 4).
 				Render("  " + cmdText)
 		}
@@ -263,21 +263,21 @@ func (d *HelpDialog) View(termWidth, termHeight int) string {
 		helpListView.WriteString(strings.Repeat(" ", dialogWidth-4) + "\n")
 	}
 
-	title := macro.DialogTitleStyle.Render("Command Palette")
+	title := api.DialogTitleStyle.Render("Command Palette")
 	cmdCount := fmt.Sprintf("(%d/%d commands)", len(d.filteredCommands), len(d.allCommands))
-	titleLine := macro.DialogTitleLineStyle.
+	titleLine := api.DialogTitleLineStyle.
 		Width(dialogWidth - 4).
-		Render(title + " " + macro.DialogCountStyle.Render(cmdCount))
+		Render(title + " " + api.DialogCountStyle.Render(cmdCount))
 
-	separator := macro.DialogSeparatorStyle.
+	separator := api.DialogSeparatorStyle.
 		Render(strings.Repeat("─", dialogWidth-4))
 
-	inputLabel := macro.DialogInputLabelStyle.
+	inputLabel := api.DialogInputLabelStyle.
 		Render("Filter: ")
 
 	inputView := inputLabel + d.filterInput.View()
 
-	instructions := macro.DialogInstructionsStyle.
+	instructions := api.DialogInstructionsStyle.
 		Render("↑/↓: Navigate | Enter: Run Command | Esc: Close")
 
 	fullContent := fmt.Sprintf("%s\n%s\n%s\n%s\n%s",
@@ -288,7 +288,7 @@ func (d *HelpDialog) View(termWidth, termHeight int) string {
 		instructions,
 	)
 
-	return macro.DialogBoxStyle.Render(fullContent)
+	return api.DialogBoxStyle.Render(fullContent)
 }
 
 func (d *HelpDialog) IsVisible() bool {

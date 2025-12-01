@@ -2,7 +2,7 @@ package vanilla
 
 import (
 	"github.com/charmbracelet/bubbles/key"
-	macro "github.com/shkschneider/macro/core"
+	api "github.com/shkschneider/macro/api"
 	plugin "github.com/shkschneider/macro/plugins"
 )
 
@@ -26,8 +26,8 @@ func init() {
 }
 
 // QuitCommand returns the command definition for quitting
-func QuitCommand() macro.CommandDef {
-	return macro.CommandDef{
+func QuitCommand() api.CommandDef {
+	return api.CommandDef{
 		Name:        CmdQuit,
 		Key:         "Ctrl-Q",
 		Description: "Quit the editor",

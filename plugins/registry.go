@@ -5,7 +5,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	macro "github.com/shkschneider/macro/core"
+	api "github.com/shkschneider/macro/api"
 )
 
 // CommandRegistration represents a command to be registered with the main app
@@ -16,7 +16,7 @@ type CommandRegistration struct {
 	KeyBinding  key.Binding
 	// PluginExecute is set for commands that use EditorContext (like save).
 	// Commands without PluginExecute need the main app to provide an execute handler.
-	PluginExecute func(ctx macro.EditorContext) tea.Cmd
+	PluginExecute func(ctx api.EditorContext) tea.Cmd
 }
 
 // Global registry of all plugin commands

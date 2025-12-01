@@ -3,7 +3,7 @@ package main
 import (
 	"path/filepath"
 
-	core "github.com/shkschneider/macro/core"
+	"github.com/shkschneider/macro/core"
 )
 
 // Buffer represents an open file with its state
@@ -168,29 +168,29 @@ func (m *model) getDirectoryPath() string {
 }
 
 // ===== EditorContext interface implementation =====
-// These methods implement core.EditorContext to allow features to interact with the editor
+// These methods implement api.EditorContext to allow features to interact with the editor
 
-// IsCurrentBufferReadOnly implements core.EditorContext
+// IsCurrentBufferReadOnly implements api.EditorContext
 func (m *model) IsCurrentBufferReadOnly() bool {
 	return m.isCurrentBufferReadOnly()
 }
 
-// GetCurrentFilePath implements core.EditorContext
+// GetCurrentFilePath implements api.EditorContext
 func (m *model) GetCurrentFilePath() string {
 	return m.getCurrentFilePath()
 }
 
-// GetCurrentContent implements core.EditorContext
+// GetCurrentContent implements api.EditorContext
 func (m *model) GetCurrentContent() string {
 	return m.syntaxTA.Value()
 }
 
-// SaveCurrentBufferState implements core.EditorContext
+// SaveCurrentBufferState implements api.EditorContext
 func (m *model) SaveCurrentBufferState() {
 	m.saveCurrentBufferState()
 }
 
-// UpdateBufferAfterSave implements core.EditorContext
+// UpdateBufferAfterSave implements api.EditorContext
 func (m *model) UpdateBufferAfterSave(content string, fileSize int64) {
 	if buf := m.getCurrentBuffer(); buf != nil {
 		buf.originalContent = content
@@ -198,12 +198,12 @@ func (m *model) UpdateBufferAfterSave(content string, fileSize int64) {
 	}
 }
 
-// SetMessage implements core.EditorContext
+// SetMessage implements api.EditorContext
 func (m *model) SetMessage(msg string) {
 	m.message = msg
 }
 
-// SetError implements core.EditorContext
+// SetError implements api.EditorContext
 func (m *model) SetError(err error) {
 	m.err = err
 }

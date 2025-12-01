@@ -11,7 +11,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/dustin/go-humanize"
-	core "github.com/shkschneider/macro/core"
+	"github.com/shkschneider/macro/api"
+	"github.com/shkschneider/macro/core"
 	vanilla "github.com/shkschneider/macro/plugins/vanilla"
 )
 
@@ -30,7 +31,7 @@ type model struct {
 	message       string   // Message line for errors/warnings/info
 	err           error
 	showPicker    bool
-	activeDialog  core.Dialog         // Single active dialog (nil when closed)
+	activeDialog  api.Dialog         // Single active dialog (nil when closed)
 	cursorState   *core.CursorState   // Persistent cursor position storage
 }
 
@@ -335,9 +336,9 @@ func executeFileSwitcher(m *model) tea.Cmd {
 func executeBufferSwitcher(m *model) tea.Cmd {
 	if len(m.buffers) > 0 {
 		// Convert buffers to BufferInfo
-		var bufferInfos []core.BufferInfo
+		var bufferInfos []api.BufferInfo
 		for _, buf := range m.buffers {
-			bufferInfos = append(bufferInfos, core.BufferInfo{
+			bufferInfos = append(bufferInfos, api.BufferInfo{
 				FilePath: buf.filePath,
 				ReadOnly: buf.readOnly,
 			})
@@ -352,9 +353,9 @@ func executeBufferSwitcher(m *model) tea.Cmd {
 // executeCommandPalette opens the command palette dialog
 func executeCommandPalette(m *model) tea.Cmd {
 	// Get all commands
-	var commands []core.CommandDef
+	var commands []api.CommandDef
 	for _, cmd := range getKeybindings() {
-		commands = append(commands, core.CommandDef{
+		commands = append(commands, api.CommandDef{
 			Name:        cmd.Name,
 			Key:         cmd.Key,
 			Description: cmd.Description,

@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sahilm/fuzzy"
-	macro "github.com/shkschneider/macro/core"
+	api "github.com/shkschneider/macro/api"
 	plugin "github.com/shkschneider/macro/plugins"
 )
 
@@ -35,8 +35,8 @@ func init() {
 }
 
 // BufferSwitcherCommand returns the command definition for buffer switching
-func BufferSwitcherCommand() macro.CommandDef {
-	return macro.CommandDef{
+func BufferSwitcherCommand() api.CommandDef {
+	return api.CommandDef{
 		Name:        CmdBufferSwitch,
 		Key:         "Ctrl-B",
 		Description: "Open buffer switcher dialog",
@@ -102,7 +102,7 @@ type BufferDialog struct {
 }
 
 // NewBufferDialog creates a new buffer dialog
-func NewBufferDialog(buffers []macro.BufferInfo, currentBuffer int) *BufferDialog {
+func NewBufferDialog(buffers []api.BufferInfo, currentBuffer int) *BufferDialog {
 	ti := textinput.New()
 	ti.Placeholder = "Type to filter buffers..."
 	ti.CharLimit = 100
@@ -138,7 +138,7 @@ func (d *BufferDialog) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (d *BufferDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
+func (d *BufferDialog) Update(msg tea.Msg) (api.Dialog, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if key.Matches(msg, DefaultBufferDialogKeyMap.Close) {
@@ -256,11 +256,11 @@ func (d *BufferDialog) View(termWidth, termHeight int) string {
 		buffer := d.filteredBuffers[i]
 		line := ""
 		if i == d.selectedIdx {
-			line = macro.DialogHighlightedStyle.
+			line = api.DialogHighlightedStyle.
 				Width(dialogWidth - 4).
 				Render("> " + buffer.name)
 		} else {
-			line = macro.DialogItemStyle.
+			line = api.DialogItemStyle.
 				Width(dialogWidth - 4).
 				Render("  " + buffer.name)
 		}
@@ -272,21 +272,21 @@ func (d *BufferDialog) View(termWidth, termHeight int) string {
 		bufferListView.WriteString(strings.Repeat(" ", dialogWidth-4) + "\n")
 	}
 
-	title := macro.DialogTitleStyle.Render("Buffer Switcher")
+	title := api.DialogTitleStyle.Render("Buffer Switcher")
 	bufferCount := fmt.Sprintf("(%d/%d buffers)", len(d.filteredBuffers), len(d.allBuffers))
-	titleLine := macro.DialogTitleLineStyle.
+	titleLine := api.DialogTitleLineStyle.
 		Width(dialogWidth - 4).
-		Render(title + " " + macro.DialogCountStyle.Render(bufferCount))
+		Render(title + " " + api.DialogCountStyle.Render(bufferCount))
 
-	separator := macro.DialogSeparatorStyle.
+	separator := api.DialogSeparatorStyle.
 		Render(strings.Repeat("─", dialogWidth-4))
 
-	inputLabel := macro.DialogInputLabelStyle.
+	inputLabel := api.DialogInputLabelStyle.
 		Render("Filter: ")
 
 	inputView := inputLabel + d.filterInput.View()
 
-	instructions := macro.DialogInstructionsStyle.
+	instructions := api.DialogInstructionsStyle.
 		Render("↑/↓: Navigate | Enter: Switch | Esc: Close")
 
 	fullContent := fmt.Sprintf("%s\n%s\n%s\n%s\n%s",
@@ -297,7 +297,7 @@ func (d *BufferDialog) View(termWidth, termHeight int) string {
 		instructions,
 	)
 
-	return macro.DialogBoxStyle.Render(fullContent)
+	return api.DialogBoxStyle.Render(fullContent)
 }
 
 func (d *BufferDialog) IsVisible() bool {

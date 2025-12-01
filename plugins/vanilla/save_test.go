@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	macro "github.com/shkschneider/macro/core"
+	api "github.com/shkschneider/macro/api"
 )
 
 // mockEditorContext implements core.EditorContext for testing
@@ -50,7 +50,7 @@ func (m *mockEditorContext) SetError(err error) {
 }
 
 // Verify mockEditorContext implements EditorContext
-var _ macro.EditorContext = (*mockEditorContext)(nil)
+var _ api.EditorContext = (*mockEditorContext)(nil)
 
 func TestSaveCommand_ReturnsFeatureCommand(t *testing.T) {
 	cmd := SaveCommand()
