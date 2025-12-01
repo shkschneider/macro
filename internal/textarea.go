@@ -361,7 +361,11 @@ func (s *Textarea) insertTextAtPosition(lines []string, line, col int, text stri
 // If forward is true, deletes character after cursor (Delete key).
 // If forward is false, deletes character before cursor (Backspace key).
 func (s *Textarea) deleteAtAllCursors(forward bool) {
-	// Get all cursors and sort them from bottom-right to top-left
+	// Get all cursors (primary first) and save primary cursor position
+	primaryLine := s.textarea.Line()
+	primaryCol := s.textarea.LineInfo().ColumnOffset
+
+	// Get all cursors and sort them from bottom-right to top-left for processing
 	allCursors := s.GetAllCursorPositions()
 	sort.Slice(allCursors, func(i, j int) bool {
 		if allCursors[i].Line != allCursors[j].Line {
@@ -372,38 +376,61 @@ func (s *Textarea) deleteAtAllCursors(forward bool) {
 
 	content := s.textarea.Value()
 	lines := strings.Split(content, "\n")
-
-	// Count line merges to adjust cursor line positions
-	lineMergeCount := 0
+	originalLineCount := len(lines)
 
 	// Process deletions from bottom-right to top-left
 	for _, cursor := range allCursors {
-		var lineMerged bool
-		lines, lineMerged = s.deleteAtPosition(lines, cursor.Line-lineMergeCount, cursor.Column, forward)
-		if lineMerged {
-			lineMergeCount++
-		}
+		lines, _ = s.deleteAtPosition(lines, cursor.Line, cursor.Column, forward)
 	}
 
 	// Update the content
 	newContent := strings.Join(lines, "\n")
 	s.textarea.SetValue(newContent)
 
-	// Update cursor positions
-	primaryLine := s.textarea.Line()
-	primaryCol := s.textarea.LineInfo().ColumnOffset
+	// Calculate new primary cursor position
+	newPrimaryLine := primaryLine
+	newPrimaryCol := primaryCol
 
-	// For backspace, primary cursor moves left by 1 (or up if at start of line)
 	if !forward {
+		// Backspace
 		if primaryCol > 0 {
-			s.SetCursorPosition(primaryLine, primaryCol-1)
+			newPrimaryCol = primaryCol - 1
 		} else if primaryLine > 0 {
-			// Move to end of previous line
-			prevLineLen := len([]rune(lines[primaryLine-1]))
-			s.SetCursorPosition(primaryLine-1, prevLineLen)
+			// Line merge - move to end of previous line
+			newPrimaryLine = primaryLine - 1
+			if newPrimaryLine < len(lines) {
+				newPrimaryCol = len([]rune(lines[newPrimaryLine]))
+			} else {
+				newPrimaryCol = 0
+			}
 		}
 	}
-	// For delete, cursor doesn't move
+	// For delete, cursor position doesn't change
+
+	// Adjust line number if lines were removed above the primary cursor
+	linesRemoved := originalLineCount - len(lines)
+	if linesRemoved > 0 && newPrimaryLine >= len(lines) {
+		newPrimaryLine = len(lines) - 1
+		if newPrimaryLine < 0 {
+			newPrimaryLine = 0
+		}
+	}
+
+	// Clamp cursor position to valid range
+	if newPrimaryLine >= len(lines) {
+		newPrimaryLine = len(lines) - 1
+	}
+	if newPrimaryLine < 0 {
+		newPrimaryLine = 0
+	}
+	if newPrimaryLine < len(lines) {
+		lineLen := len([]rune(lines[newPrimaryLine]))
+		if newPrimaryCol > lineLen {
+			newPrimaryCol = lineLen
+		}
+	}
+
+	s.SetCursorPosition(newPrimaryLine, newPrimaryCol)
 
 	// Update secondary cursor positions
 	for i := range s.secondaryCursors {
@@ -415,7 +442,23 @@ func (s *Textarea) deleteAtAllCursors(forward bool) {
 				s.secondaryCursors[i].Line--
 				if s.secondaryCursors[i].Line < len(lines) {
 					s.secondaryCursors[i].Column = len([]rune(lines[s.secondaryCursors[i].Line]))
+				} else {
+					s.secondaryCursors[i].Column = 0
 				}
+			}
+		}
+
+		// Clamp secondary cursor positions
+		if s.secondaryCursors[i].Line >= len(lines) {
+			s.secondaryCursors[i].Line = len(lines) - 1
+			if s.secondaryCursors[i].Line < 0 {
+				s.secondaryCursors[i].Line = 0
+			}
+		}
+		if s.secondaryCursors[i].Line < len(lines) {
+			lineLen := len([]rune(lines[s.secondaryCursors[i].Line]))
+			if s.secondaryCursors[i].Column > lineLen {
+				s.secondaryCursors[i].Column = lineLen
 			}
 		}
 	}
@@ -433,6 +476,14 @@ func (s *Textarea) deleteAtPosition(lines []string, line, col int, forward bool)
 
 	lineContent := lines[line]
 	runes := []rune(lineContent)
+
+	// Clamp column to valid range
+	if col < 0 {
+		col = 0
+	}
+	if col > len(runes) {
+		col = len(runes)
+	}
 
 	if forward {
 		// Delete key - delete character at cursor position

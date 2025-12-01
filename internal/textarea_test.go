@@ -307,3 +307,53 @@ func TestIsWordChar(t *testing.T) {
 		}
 	}
 }
+
+func TestTextarea_MultiCursor_DeleteAtPosition_OutOfBounds(t *testing.T) {
+	sta := NewTextarea()
+	sta.SetValue("hello")
+	
+	// Test that deleteAtPosition handles out-of-bounds column gracefully
+	lines := []string{"hello"}
+	
+	// Column beyond line length should not panic
+	result, merged := sta.deleteAtPosition(lines, 0, 100, false) // backspace with col > len
+	if merged {
+		t.Error("Should not merge lines for out of bounds column")
+	}
+	// The column should be clamped, so it should delete at end of line
+	if result[0] != "hell" {
+		t.Errorf("Expected 'hell' after delete, got '%s'", result[0])
+	}
+	
+	// Reset lines for next test
+	lines = []string{"hello"}
+	result, merged = sta.deleteAtPosition(lines, 0, 100, true) // delete with col > len
+	// At end of line with no next line, nothing should happen
+	if result[0] != "hello" {
+		t.Errorf("Expected 'hello' unchanged, got '%s'", result[0])
+	}
+}
+
+func TestTextarea_MultiCursor_DeleteWithInvalidLine(t *testing.T) {
+	sta := NewTextarea()
+	
+	lines := []string{"hello", "world"}
+	
+	// Test negative line
+	result, merged := sta.deleteAtPosition(lines, -1, 0, false)
+	if merged {
+		t.Error("Should not merge for invalid line")
+	}
+	if len(result) != 2 {
+		t.Error("Lines should be unchanged for invalid line")
+	}
+	
+	// Test line beyond array
+	result, merged = sta.deleteAtPosition(lines, 10, 0, false)
+	if merged {
+		t.Error("Should not merge for line beyond array")
+	}
+	if len(result) != 2 {
+		t.Error("Lines should be unchanged for line beyond array")
+	}
+}
