@@ -308,6 +308,8 @@ func (m *Model) CloseCurrentBuffer() bool {
 	// Check if no buffers remain
 	if len(m.Buffers) == 0 {
 		m.CurrentBuffer = -1
+		// Clear the textarea when no buffers remain
+		m.Textarea.SetValue("")
 		return true
 	}
 
