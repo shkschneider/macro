@@ -25,7 +25,7 @@ var PaletteKeyBinding = key.NewBinding(
 func ExecuteCommandPalette(m *Model) tea.Cmd {
 	// Get all commands
 	var commands []api.CommandDef
-	for _, cmd := range GetKeybindings() {
+	for _, cmd := range GetCommands() {
 		commands = append(commands, api.CommandDef{
 			Name:        cmd.Name,
 			Key:         cmd.Key,

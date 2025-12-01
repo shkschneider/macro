@@ -52,8 +52,8 @@ func wrapPluginExecute(cmd api.CommandRegistration) func(*Model) tea.Cmd {
 	}
 }
 
-// GetKeybindings returns all registered commands.
-func GetKeybindings() []Command {
+// GetCommands returns all registered commands.
+func GetCommands() []Command {
 	return CommandRegistry
 }
 
