@@ -3,12 +3,11 @@ package internal
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/shkschneider/macro/plugins/vanilla"
+	"github.com/shkschneider/macro/api"
 )
 
 var (
@@ -136,48 +135,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
-	// Handle custom dialog result messages
+	// Handle plugin messages using the PluginMsg interface
+	// This allows plugins to define their own message types without
+	// the main app needing to know about them in a switch statement
+	if pluginMsg, ok := msg.(api.PluginMsg); ok {
+		return m, pluginMsg.Handle(&m)
+	}
+
 	switch msg := msg.(type) {
-	case vanilla.FileSelectedMsg:
-		// Save current buffer state before opening new file
-		m.saveCurrentBufferState()
-		// Load the selected file into a new buffer
-		content, err := os.ReadFile(msg.Path)
-		if err == nil {
-			info, statErr := os.Stat(msg.Path)
-			readOnly := false
-			var fileSize int64
-			if statErr == nil {
-				readOnly = determineReadOnly(info)
-				fileSize = info.Size()
-			}
-
-			bufferIdx := m.addBuffer(msg.Path, string(content), readOnly, fileSize)
-			m.loadBuffer(bufferIdx)
-			m.Message = fmt.Sprintf("Opened %s", filepath.Base(msg.Path))
-			m.Err = nil
-		} else {
-			m.Message = fmt.Sprintf("Error loading file: %v", err)
-			m.Err = err
-		}
-		return m, nil
-
-	case vanilla.BufferSelectedMsg:
-		// Save current buffer state before switching
-		m.saveCurrentBufferState()
-		// Switch to selected buffer
-		m.loadBuffer(msg.Index)
-		m.Message = fmt.Sprintf("Switched to buffer")
-		return m, nil
-
-	case CommandSelectedMsg:
-		// Execute the selected command
-		cmd := GetCommandByName(msg.CommandName)
-		if cmd != nil && cmd.Execute != nil {
-			return m, cmd.Execute(&m)
-		}
-		return m, nil
-
 	case tea.KeyMsg:
 		// Handle key bindings by looking up registered commands
 		if cmd := GetCommandByKey(msg); cmd != nil && cmd.Execute != nil {

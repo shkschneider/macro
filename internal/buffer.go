@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"os"
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -240,4 +241,38 @@ func (m *Model) SaveCursorState() {
 	if m.CursorState != nil {
 		_ = m.CursorState.Save()
 	}
+}
+
+// OpenFile implements api.EditorContext - opens a file into a new buffer
+func (m *Model) OpenFile(path string) error {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	info, statErr := os.Stat(path)
+	readOnly := false
+	var fileSize int64
+	if statErr == nil {
+		readOnly = determineReadOnly(info)
+		fileSize = info.Size()
+	}
+
+	bufferIdx := m.addBuffer(path, string(content), readOnly, fileSize)
+	m.loadBuffer(bufferIdx)
+	m.Err = nil
+	return nil
+}
+
+// SwitchToBuffer implements api.EditorContext - switches to a buffer by index
+func (m *Model) SwitchToBuffer(index int) {
+	m.loadBuffer(index)
+}
+
+// ExecuteCommand implements api.EditorContext - executes a command by name
+func (m *Model) ExecuteCommand(name string) tea.Cmd {
+	cmd := GetCommandByName(name)
+	if cmd != nil && cmd.Execute != nil {
+		return cmd.Execute(m)
+	}
+	return nil
 }

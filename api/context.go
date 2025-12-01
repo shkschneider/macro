@@ -15,13 +15,20 @@ type EditorContext interface {
 	GetBuffers() []BufferInfo
 	GetCurrentBufferIndex() int
 
+	// Buffer management
+	OpenFile(path string) error
+	SwitchToBuffer(index int)
+
 	// Message operations
 	SetMessage(msg string)
 	SetError(err error)
 
 	// Dialog operations
 	SetActiveDialog(dialog Dialog) tea.Cmd
-	
+
 	// Cursor state operations
 	SaveCursorState()
+
+	// Command operations
+	ExecuteCommand(name string) tea.Cmd
 }

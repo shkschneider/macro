@@ -13,6 +13,15 @@ type Dialog interface {
 	IsVisible() bool
 }
 
+// PluginMsg is an interface for messages from plugins that can handle themselves.
+// This allows plugins to define their own message types without the main app
+// needing to know about them in a switch statement.
+type PluginMsg interface {
+	// Handle processes the message and returns any resulting tea.Cmd.
+	// The EditorContext provides access to editor state and operations.
+	Handle(ctx EditorContext) tea.Cmd
+}
+
 // Dialog box styles - used by plugins to render consistent dialogs
 var (
 	DialogBoxStyle = lipgloss.NewStyle().

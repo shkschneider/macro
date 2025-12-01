@@ -62,6 +62,14 @@ type BufferSelectedMsg struct {
 	Index int
 }
 
+// Handle implements api.PluginMsg - switches to the selected buffer
+func (msg BufferSelectedMsg) Handle(ctx api.EditorContext) tea.Cmd {
+	ctx.SaveCurrentBufferState()
+	ctx.SwitchToBuffer(msg.Index)
+	ctx.SetMessage("Switched to buffer")
+	return nil
+}
+
 // ====== Key Bindings ======
 
 // BufferDialogKeyMap defines the key bindings for the buffer dialog

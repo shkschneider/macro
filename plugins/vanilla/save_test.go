@@ -74,6 +74,17 @@ func (m *mockEditorContext) SaveCursorState() {
 	m.cursorSaved = true
 }
 
+func (m *mockEditorContext) OpenFile(path string) error {
+	return nil
+}
+
+func (m *mockEditorContext) SwitchToBuffer(index int) {
+}
+
+func (m *mockEditorContext) ExecuteCommand(name string) tea.Cmd {
+	return nil
+}
+
 // Verify mockEditorContext implements EditorContext
 var _ api.EditorContext = (*mockEditorContext)(nil)
 

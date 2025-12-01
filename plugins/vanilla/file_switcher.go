@@ -63,6 +63,18 @@ type FileSelectedMsg struct {
 	Path string
 }
 
+// Handle implements api.PluginMsg - opens the selected file
+func (msg FileSelectedMsg) Handle(ctx api.EditorContext) tea.Cmd {
+	ctx.SaveCurrentBufferState()
+	if err := ctx.OpenFile(msg.Path); err != nil {
+		ctx.SetMessage(fmt.Sprintf("Error loading file: %v", err))
+		ctx.SetError(err)
+	} else {
+		ctx.SetMessage(fmt.Sprintf("Opened %s", filepath.Base(msg.Path)))
+	}
+	return nil
+}
+
 // ====== Key Bindings ======
 
 // FileDialogKeyMap defines the key bindings for the file dialog
