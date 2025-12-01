@@ -23,7 +23,7 @@ func TestPaletteKeyBinding(t *testing.T) {
 }
 
 func TestNewPaletteDialog(t *testing.T) {
-	commands := []api.CommandDef{
+	commands := []api.CommandRegistration{
 		{Name: "cmd1", Key: "Ctrl-1", Description: "Command 1"},
 		{Name: "cmd2", Key: "Ctrl-2", Description: "Command 2"},
 	}
@@ -48,7 +48,7 @@ func TestNewPaletteDialog(t *testing.T) {
 }
 
 func TestPaletteDialog_IsVisible(t *testing.T) {
-	dialog := NewPaletteDialog([]api.CommandDef{})
+	dialog := NewPaletteDialog([]api.CommandRegistration{})
 
 	if !dialog.IsVisible() {
 		t.Error("New dialog should be visible")
@@ -61,7 +61,7 @@ func TestPaletteDialog_IsVisible(t *testing.T) {
 }
 
 func TestPaletteDialog_Init(t *testing.T) {
-	dialog := NewPaletteDialog([]api.CommandDef{})
+	dialog := NewPaletteDialog([]api.CommandRegistration{})
 	cmd := dialog.Init()
 
 	if cmd == nil {
@@ -70,7 +70,7 @@ func TestPaletteDialog_Init(t *testing.T) {
 }
 
 func TestPaletteDialog_View(t *testing.T) {
-	commands := []api.CommandDef{
+	commands := []api.CommandRegistration{
 		{Name: "test-cmd", Key: "Ctrl-T", Description: "Test command"},
 	}
 	dialog := NewPaletteDialog(commands)
@@ -88,7 +88,7 @@ func TestPaletteDialog_View(t *testing.T) {
 }
 
 func TestPaletteDialog_View_Hidden(t *testing.T) {
-	dialog := NewPaletteDialog([]api.CommandDef{})
+	dialog := NewPaletteDialog([]api.CommandRegistration{})
 	dialog.visible = false
 
 	view := dialog.View(80, 24)
@@ -99,7 +99,7 @@ func TestPaletteDialog_View_Hidden(t *testing.T) {
 }
 
 func TestPaletteDialog_Update_Close(t *testing.T) {
-	dialog := NewPaletteDialog([]api.CommandDef{})
+	dialog := NewPaletteDialog([]api.CommandRegistration{})
 
 	// Test ESC key closes dialog
 	escMsg := tea.KeyMsg{Type: tea.KeyEscape}
@@ -112,7 +112,7 @@ func TestPaletteDialog_Update_Close(t *testing.T) {
 }
 
 func TestPaletteDialog_Update_Navigation(t *testing.T) {
-	commands := []api.CommandDef{
+	commands := []api.CommandRegistration{
 		{Name: "cmd1", Key: "Ctrl-1", Description: "Command 1"},
 		{Name: "cmd2", Key: "Ctrl-2", Description: "Command 2"},
 		{Name: "cmd3", Key: "Ctrl-3", Description: "Command 3"},
@@ -149,7 +149,7 @@ func TestPaletteDialog_Update_Navigation(t *testing.T) {
 }
 
 func TestPaletteDialog_ApplyFuzzyFilter_Empty(t *testing.T) {
-	commands := []api.CommandDef{
+	commands := []api.CommandRegistration{
 		{Name: "save", Key: "Ctrl-S", Description: "Save file"},
 		{Name: "quit", Key: "Ctrl-Q", Description: "Quit editor"},
 	}

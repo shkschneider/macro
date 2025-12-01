@@ -24,9 +24,9 @@ var PaletteKeyBinding = key.NewBinding(
 
 func ExecuteCommandPalette(m *Model) tea.Cmd {
 	// Get all commands
-	var commands []api.CommandDef
+	var commands []api.CommandRegistration
 	for _, cmd := range GetCommands() {
-		commands = append(commands, api.CommandDef{
+		commands = append(commands, api.CommandRegistration{
 			Name:        cmd.Name,
 			Key:         cmd.Key,
 			Description: cmd.Description,
@@ -100,7 +100,7 @@ var DefaultPaletteDialogKeyMap = PaletteDialogKeyMap{
 
 // commandItem is used internally by PaletteDialog
 type commandItem struct {
-	command api.CommandDef
+	command api.CommandRegistration
 }
 
 // ====== Dialog Implementation ======
@@ -116,7 +116,7 @@ type PaletteDialog struct {
 }
 
 // NewPaletteDialog creates a new help dialog
-func NewPaletteDialog(commands []api.CommandDef) *PaletteDialog {
+func NewPaletteDialog(commands []api.CommandRegistration) *PaletteDialog {
 	ti := textinput.New()
 	ti.Placeholder = "Type to filter commands..."
 	ti.CharLimit = 100

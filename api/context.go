@@ -2,6 +2,12 @@ package api
 
 import tea "github.com/charmbracelet/bubbletea"
 
+// BufferInfo contains information about a buffer for dialogs
+type BufferInfo struct {
+	FilePath string
+	ReadOnly bool
+}
+
 // EditorContext provides an interface for plugins to interact with the editor.
 // This allows plugins to define their own execution logic without depending on
 // the main package's model type directly.
