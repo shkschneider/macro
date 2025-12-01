@@ -1,4 +1,4 @@
-package vanilla
+package internal
 
 import (
 	"fmt"
@@ -14,32 +14,32 @@ import (
 
 // ====== Command Registration ======
 
-// CmdHelp is the command name constant for help/command palette
-const CmdHelp = "help-show"
+// CmdPalette is the command name constant for help/command palette
+const CmdPalette = "help-show"
 
-// HelpKeyBinding is the key binding for the command palette
-var HelpKeyBinding = key.NewBinding(
+// PaletteKeyBinding is the key binding for the command palette
+var PaletteKeyBinding = key.NewBinding(
 	key.WithKeys("ctrl+@", "ctrl+ "), // ctrl+@ is what ctrl+space sends
 	key.WithHelp("ctrl+space", "open command palette"),
 )
 
 func init() {
 	plugin.RegisterCommand(plugin.CommandRegistration{
-		Name:           CmdHelp,
+		Name:           CmdPalette,
 		Key:            "Ctrl-Space",
 		Description:    "Show command palette",
-		KeyBinding:     HelpKeyBinding,
+		KeyBinding:     PaletteKeyBinding,
 		PluginExecute: nil, // Main app provides execute handler
 	})
 }
 
-// HelpCommand returns the command definition for showing help
-func HelpCommand() api.CommandDef {
+// PaletteCommand returns the command definition for showing help
+func PaletteCommand() api.CommandDef {
 	return api.CommandDef{
-		Name:        CmdHelp,
+		Name:        CmdPalette,
 		Key:         "Ctrl-Space",
 		Description: "Show command palette",
-		KeyBinding:  HelpKeyBinding,
+		KeyBinding:  PaletteKeyBinding,
 	}
 }
 
@@ -52,16 +52,16 @@ type CommandSelectedMsg struct {
 
 // ====== Key Bindings ======
 
-// HelpDialogKeyMap defines the key bindings for the help dialog
-type HelpDialogKeyMap struct {
+// PaletteDialogKeyMap defines the key bindings for the help dialog
+type PaletteDialogKeyMap struct {
 	Close key.Binding
 	Up    key.Binding
 	Down  key.Binding
 	Enter key.Binding
 }
 
-// DefaultHelpDialogKeyMap returns the default key bindings for help dialog
-var DefaultHelpDialogKeyMap = HelpDialogKeyMap{
+// DefaultPaletteDialogKeyMap returns the default key bindings for help dialog
+var DefaultPaletteDialogKeyMap = PaletteDialogKeyMap{
 	Close: key.NewBinding(
 		key.WithKeys("esc", "ctrl+c", "ctrl+@", "ctrl+ "),
 		key.WithHelp("esc", "close dialog"),
@@ -82,15 +82,15 @@ var DefaultHelpDialogKeyMap = HelpDialogKeyMap{
 
 // ====== Internal Types ======
 
-// commandItem is used internally by HelpDialog
+// commandItem is used internally by PaletteDialog
 type commandItem struct {
 	command api.CommandDef
 }
 
 // ====== Dialog Implementation ======
 
-// HelpDialog implements the Dialog interface for help/command selection
-type HelpDialog struct {
+// PaletteDialog implements the Dialog interface for help/command selection
+type PaletteDialog struct {
 	filterInput      textinput.Model
 	allCommands      []commandItem
 	filteredCommands []commandItem
@@ -99,8 +99,8 @@ type HelpDialog struct {
 	lastQuery        string // Track last query to avoid unnecessary resets
 }
 
-// NewHelpDialog creates a new help dialog
-func NewHelpDialog(commands []api.CommandDef) *HelpDialog {
+// NewPaletteDialog creates a new help dialog
+func NewPaletteDialog(commands []api.CommandDef) *PaletteDialog {
 	ti := textinput.New()
 	ti.Placeholder = "Type to filter commands..."
 	ti.CharLimit = 100
@@ -115,7 +115,7 @@ func NewHelpDialog(commands []api.CommandDef) *HelpDialog {
 		})
 	}
 
-	return &HelpDialog{
+	return &PaletteDialog{
 		filterInput:      ti,
 		allCommands:      commandItems,
 		filteredCommands: commandItems,
@@ -124,18 +124,18 @@ func NewHelpDialog(commands []api.CommandDef) *HelpDialog {
 	}
 }
 
-func (d *HelpDialog) Init() tea.Cmd {
+func (d *PaletteDialog) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (d *HelpDialog) Update(msg tea.Msg) (api.Dialog, tea.Cmd) {
+func (d *PaletteDialog) Update(msg tea.Msg) (api.Dialog, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if key.Matches(msg, DefaultHelpDialogKeyMap.Close) {
+		if key.Matches(msg, DefaultPaletteDialogKeyMap.Close) {
 			d.visible = false
 			return d, nil
 		}
-		if key.Matches(msg, DefaultHelpDialogKeyMap.Enter) {
+		if key.Matches(msg, DefaultPaletteDialogKeyMap.Enter) {
 			if d.selectedIdx >= 0 && d.selectedIdx < len(d.filteredCommands) {
 				selectedCommand := d.filteredCommands[d.selectedIdx]
 				d.visible = false
@@ -144,13 +144,13 @@ func (d *HelpDialog) Update(msg tea.Msg) (api.Dialog, tea.Cmd) {
 				}
 			}
 		}
-		if key.Matches(msg, DefaultHelpDialogKeyMap.Up) {
+		if key.Matches(msg, DefaultPaletteDialogKeyMap.Up) {
 			if d.selectedIdx > 0 {
 				d.selectedIdx--
 			}
 			return d, nil
 		}
-		if key.Matches(msg, DefaultHelpDialogKeyMap.Down) {
+		if key.Matches(msg, DefaultPaletteDialogKeyMap.Down) {
 			if d.selectedIdx < len(d.filteredCommands)-1 {
 				d.selectedIdx++
 			}
@@ -177,7 +177,7 @@ func (d *HelpDialog) Update(msg tea.Msg) (api.Dialog, tea.Cmd) {
 	return d, cmd
 }
 
-func (d *HelpDialog) applyFuzzyFilter() {
+func (d *PaletteDialog) applyFuzzyFilter() {
 	query := d.filterInput.Value()
 
 	if query == "" {
@@ -212,7 +212,7 @@ func (d *HelpDialog) applyFuzzyFilter() {
 	d.lastQuery = query
 }
 
-func (d *HelpDialog) View(termWidth, termHeight int) string {
+func (d *PaletteDialog) View(termWidth, termHeight int) string {
 	if !d.visible {
 		return ""
 	}
@@ -291,6 +291,6 @@ func (d *HelpDialog) View(termWidth, termHeight int) string {
 	return api.DialogBoxStyle.Render(fullContent)
 }
 
-func (d *HelpDialog) IsVisible() bool {
+func (d *PaletteDialog) IsVisible() bool {
 	return d.visible
 }

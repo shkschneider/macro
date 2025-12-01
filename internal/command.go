@@ -4,7 +4,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/shkschneider/macro/api"
-	"github.com/shkschneider/macro/plugins/vanilla"
 )
 
 func ExecuteCommandPalette(m *Model) tea.Cmd {
@@ -17,7 +16,7 @@ func ExecuteCommandPalette(m *Model) tea.Cmd {
 			Description: cmd.Description,
 		})
 	}
-	m.ActiveDialog = vanilla.NewHelpDialog(commands)
+	m.ActiveDialog = NewPaletteDialog(commands)
 	return m.ActiveDialog.Init()
 }
 

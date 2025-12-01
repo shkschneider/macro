@@ -8,7 +8,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/shkschneider/macro/internal"
 	"github.com/shkschneider/macro/plugins"
-	"github.com/shkschneider/macro/plugins/vanilla"
 )
 
 func main() {
@@ -28,7 +27,7 @@ func main() {
 		var execFunc func(*internal.Model) tea.Cmd
 
 		// Special case: Help command needs access to CommandRegistry
-		if cmd.Name == vanilla.CmdHelp {
+		if cmd.Name == internal.CmdPalette {
 			execFunc = internal.ExecuteCommandPalette
 		} else if cmd.PluginExecute != nil {
 			// Use the plugin's execute function via EditorContext

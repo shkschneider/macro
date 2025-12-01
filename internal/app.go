@@ -170,7 +170,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Message = fmt.Sprintf("Switched to buffer")
 		return m, nil
 
-	case vanilla.CommandSelectedMsg:
+	case CommandSelectedMsg:
 		// Execute the selected command
 		cmd := GetCommandByName(msg.CommandName)
 		if cmd != nil && cmd.Execute != nil {
