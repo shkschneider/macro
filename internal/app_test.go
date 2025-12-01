@@ -209,7 +209,7 @@ func TestBuildStatusBar_ModifiedFile(t *testing.T) {
 	}
 	m.CurrentBuffer = 0
 	// Set the textarea value to simulate modification
-	m.SyntaxTA.SetValue("package modified")
+	m.Textarea.SetValue("package modified")
 
 	statusBar := m.BuildStatusBar()
 

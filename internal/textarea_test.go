@@ -5,18 +5,18 @@ import (
 	"testing"
 )
 
-func TestNewSyntaxTextarea(t *testing.T) {
-	sta := NewSyntaxTextarea()
+func TestNewTextarea(t *testing.T) {
+	sta := NewTextarea()
 	if sta == nil {
-		t.Fatal("NewSyntaxTextarea() returned nil")
+		t.Fatal("NewTextarea() returned nil")
 	}
 	if !sta.Focused() {
-		t.Error("SyntaxTextarea should be focused after creation")
+		t.Error("Textarea should be focused after creation")
 	}
 }
 
-func TestSyntaxTextarea_SetFilename(t *testing.T) {
-	sta := NewSyntaxTextarea()
+func TestTextarea_SetFilename(t *testing.T) {
+	sta := NewTextarea()
 
 	sta.SetFilename("test.go")
 	if sta.GetLanguage() != "Go" {
@@ -32,8 +32,8 @@ func TestSyntaxTextarea_SetFilename(t *testing.T) {
 	// Unknown extension should return empty
 }
 
-func TestSyntaxTextarea_SetValue(t *testing.T) {
-	sta := NewSyntaxTextarea()
+func TestTextarea_SetValue(t *testing.T) {
+	sta := NewTextarea()
 	
 	testContent := "package main\n\nfunc main() {}"
 	sta.SetValue(testContent)
@@ -43,8 +43,8 @@ func TestSyntaxTextarea_SetValue(t *testing.T) {
 	}
 }
 
-func TestSyntaxTextarea_SetDimensions(t *testing.T) {
-	sta := NewSyntaxTextarea()
+func TestTextarea_SetDimensions(t *testing.T) {
+	sta := NewTextarea()
 	
 	sta.SetWidth(80)
 	sta.SetHeight(24)
@@ -52,8 +52,8 @@ func TestSyntaxTextarea_SetDimensions(t *testing.T) {
 	// Should not panic
 }
 
-func TestSyntaxTextarea_View(t *testing.T) {
-	sta := NewSyntaxTextarea()
+func TestTextarea_View(t *testing.T) {
+	sta := NewTextarea()
 	sta.SetFilename("test.go")
 	sta.SetValue("package main\n\nfunc main() {}")
 	sta.SetWidth(80)
@@ -70,16 +70,16 @@ func TestSyntaxTextarea_View(t *testing.T) {
 	}
 }
 
-func TestSyntaxTextarea_FocusBlur(t *testing.T) {
-	sta := NewSyntaxTextarea()
+func TestTextarea_FocusBlur(t *testing.T) {
+	sta := NewTextarea()
 	
 	if !sta.Focused() {
-		t.Error("SyntaxTextarea should be focused after creation")
+		t.Error("Textarea should be focused after creation")
 	}
 	
 	sta.Blur()
 	if sta.Focused() {
-		t.Error("SyntaxTextarea should not be focused after Blur()")
+		t.Error("Textarea should not be focused after Blur()")
 	}
 }
 
@@ -103,8 +103,8 @@ func TestIntToStr(t *testing.T) {
 	}
 }
 
-func TestSyntaxTextarea_CursorPosition(t *testing.T) {
-	sta := NewSyntaxTextarea()
+func TestTextarea_CursorPosition(t *testing.T) {
+	sta := NewTextarea()
 	sta.SetValue("line 1\nline 2\nline 3\nline 4\nline 5")
 	
 	// Move cursor to start (line 0)
@@ -128,8 +128,8 @@ func TestSyntaxTextarea_CursorPosition(t *testing.T) {
 	}
 }
 
-func TestSyntaxTextarea_CursorPositionBounds(t *testing.T) {
-	sta := NewSyntaxTextarea()
+func TestTextarea_CursorPositionBounds(t *testing.T) {
+	sta := NewTextarea()
 	sta.SetValue("line 1\nline 2\nline 3")
 	
 	// Test setting cursor beyond last line
@@ -145,8 +145,8 @@ func TestSyntaxTextarea_CursorPositionBounds(t *testing.T) {
 	}
 }
 
-func TestSyntaxTextarea_LineCount(t *testing.T) {
-	sta := NewSyntaxTextarea()
+func TestTextarea_LineCount(t *testing.T) {
+	sta := NewTextarea()
 	sta.SetValue("line 1\nline 2\nline 3\nline 4")
 	
 	if sta.LineCount() != 4 {
@@ -154,8 +154,8 @@ func TestSyntaxTextarea_LineCount(t *testing.T) {
 	}
 }
 
-func TestSyntaxTextarea_CursorMovement(t *testing.T) {
-	sta := NewSyntaxTextarea()
+func TestTextarea_CursorMovement(t *testing.T) {
+	sta := NewTextarea()
 	sta.SetValue("line 1\nline 2\nline 3")
 	
 	// First move cursor to top

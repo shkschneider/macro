@@ -7,8 +7,8 @@ import (
 func TestInitialModel_Empty(t *testing.T) {
 	m := InitialModel("")
 
-	if m.SyntaxTA == nil {
-		t.Error("InitialModel should initialize SyntaxTA")
+	if m.Textarea == nil {
+		t.Error("InitialModel should initialize Textarea")
 	}
 	if m.CurrentBuffer != -1 {
 		t.Errorf("InitialModel with empty path should have CurrentBuffer -1, got %d", m.CurrentBuffer)

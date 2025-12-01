@@ -13,7 +13,7 @@ import (
 )
 
 type Model struct {
-	SyntaxTA      *SyntaxTextarea
+	Textarea      *Textarea
 	Viewport      viewport.Model
 	Filepicker    filepicker.Model
 	Buffers       []Buffer // All open buffers
@@ -26,8 +26,8 @@ type Model struct {
 }
 
 func InitialModel(filePath string) Model {
-	sta := NewSyntaxTextarea()
-	sta.Focus()
+	ta := NewTextarea()
+	ta.Focus()
 
 	fp := filepicker.New()
 	fp.DirAllowed = false
@@ -36,7 +36,7 @@ func InitialModel(filePath string) Model {
 	vp := viewport.New(80, 24)
 
 	m := Model{
-		SyntaxTA:      sta,
+		Textarea:      ta,
 		Viewport:      vp,
 		Filepicker:    fp,
 		Buffers:       []Buffer{},
@@ -137,7 +137,7 @@ func (m *Model) BuildStatusBar() string {
 	// rightParts = append(rightParts, "[utf-8]")
 
 	// Cursor position (line:column)
-	line, col := m.SyntaxTA.CursorPosition()
+	line, col := m.Textarea.CursorPosition()
 	rightParts = append(rightParts, fmt.Sprintf("%d:%d", line, col))
 
 	// Directory path
