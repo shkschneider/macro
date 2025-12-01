@@ -25,7 +25,7 @@ func init() {
 		Key:            "Ctrl-S",
 		Description:    "Save current buffer to disk",
 		KeyBinding:     SaveKeyBinding,
-		FeatureExecute: executeSave, // Feature provides execute handler
+		PluginExecute: executeSave, // Plugin provides execute handler
 	})
 }
 

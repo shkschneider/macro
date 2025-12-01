@@ -59,9 +59,9 @@ func main() {
 			execFunc = executeBufferSwitcher
 		default:
 			// For commands with EditorContext execute (like save)
-			if cmd.FeatureExecute != nil {
+			if cmd.PluginExecute != nil {
 				execFunc = func(m *model) tea.Cmd {
-					return cmd.FeatureExecute(m)
+					return cmd.PluginExecute(m)
 				}
 			}
 		}

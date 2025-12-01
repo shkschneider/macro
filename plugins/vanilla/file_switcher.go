@@ -31,7 +31,7 @@ func init() {
 		Key:            "Ctrl-P",
 		Description:    "Open file switcher",
 		KeyBinding:     FileSwitcherKeyBinding,
-		FeatureExecute: nil, // Main app provides execute handler
+		PluginExecute: nil, // Main app provides execute handler
 	})
 }
 

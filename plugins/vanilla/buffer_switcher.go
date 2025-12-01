@@ -30,7 +30,7 @@ func init() {
 		Key:            "Ctrl-B",
 		Description:    "Open buffer switcher dialog",
 		KeyBinding:     BufferSwitcherKeyBinding,
-		FeatureExecute: nil, // Main app provides execute handler
+		PluginExecute: nil, // Main app provides execute handler
 	})
 }
 

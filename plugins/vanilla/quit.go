@@ -21,7 +21,7 @@ func init() {
 		Key:            "Ctrl-Q",
 		Description:    "Quit the editor",
 		KeyBinding:     QuitKeyBinding,
-		FeatureExecute: nil, // Main app provides execute handler
+		PluginExecute: nil, // Main app provides execute handler
 	})
 }
 

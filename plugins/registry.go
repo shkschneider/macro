@@ -14,19 +14,19 @@ type CommandRegistration struct {
 	Key         string
 	Description string
 	KeyBinding  key.Binding
-	// FeatureExecute is set for commands that use EditorContext (like save).
-	// Commands without FeatureExecute need the main app to provide an execute handler.
-	FeatureExecute func(ctx macro.EditorContext) tea.Cmd
+	// PluginExecute is set for commands that use EditorContext (like save).
+	// Commands without PluginExecute need the main app to provide an execute handler.
+	PluginExecute func(ctx macro.EditorContext) tea.Cmd
 }
 
-// Global registry of all feature commands
+// Global registry of all plugin commands
 var (
 	registeredCommands []CommandRegistration
 	registryMutex      sync.RWMutex
 )
 
-// RegisterCommand adds a command to the global feature registry.
-// Features should call this in their init() function to self-register.
+// RegisterCommand adds a command to the global plugin registry.
+// Plugins should call this in their init() function to self-register.
 // Thread-safe for use during package initialization and beyond.
 func RegisterCommand(cmd CommandRegistration) {
 	registryMutex.Lock()
@@ -34,8 +34,8 @@ func RegisterCommand(cmd CommandRegistration) {
 	registeredCommands = append(registeredCommands, cmd)
 }
 
-// Register calls the provided callback for each registered feature command.
-// This allows features to auto-register with the main app's command registry.
+// Register calls the provided callback for each registered plugin command.
+// This allows plugins to auto-register with the main app's command registry.
 func Register(registerFunc func(cmd CommandRegistration)) {
 	registryMutex.RLock()
 	defer registryMutex.RUnlock()
@@ -44,7 +44,7 @@ func Register(registerFunc func(cmd CommandRegistration)) {
 	}
 }
 
-// GetCommands returns a copy of all registered feature commands.
+// GetCommands returns a copy of all registered plugin commands.
 func GetCommands() []CommandRegistration {
 	registryMutex.RLock()
 	defer registryMutex.RUnlock()

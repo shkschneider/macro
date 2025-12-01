@@ -29,7 +29,7 @@ func init() {
 		Key:            "Ctrl-Space",
 		Description:    "Show command palette",
 		KeyBinding:     HelpKeyBinding,
-		FeatureExecute: nil, // Main app provides execute handler
+		PluginExecute: nil, // Main app provides execute handler
 	})
 }
 
