@@ -49,6 +49,18 @@ type CommandSelectedMsg struct {
 	CommandName string
 }
 
+// Handle implements api.PluginMsg - executes the selected command
+func (msg CommandSelectedMsg) Handle(ctx api.EditorContext) tea.Cmd {
+	cmd := GetCommandByName(msg.CommandName)
+	if cmd != nil && cmd.Execute != nil {
+		// We need to cast ctx back to *Model to call Execute
+		if m, ok := ctx.(*Model); ok {
+			return cmd.Execute(m)
+		}
+	}
+	return nil
+}
+
 // ====== Key Bindings ======
 
 // PaletteDialogKeyMap defines the key bindings for the help dialog
