@@ -41,47 +41,36 @@ func main() {
 		globalReadOnlyMode = ReadWriteForced
 	}
 
-	// Register feature commands
-	registerCommand(Command{
-		Name:        feature.FileSwitcherCommand().Name,
-		Key:         feature.FileSwitcherCommand().Key,
-		Description: feature.FileSwitcherCommand().Description,
-		KeyBinding:  feature.FileSwitcherCommand().KeyBinding,
-		Execute:     executeFileSwitcher,
-	})
-	registerCommand(Command{
-		Name:        feature.BufferSwitcherCommand().Name,
-		Key:         feature.BufferSwitcherCommand().Key,
-		Description: feature.BufferSwitcherCommand().Description,
-		KeyBinding:  feature.BufferSwitcherCommand().KeyBinding,
-		Execute:     executeBufferSwitcher,
-	})
-	registerCommand(Command{
-		Name:        feature.HelpCommand().Name,
-		Key:         feature.HelpCommand().Key,
-		Description: feature.HelpCommand().Description,
-		KeyBinding:  feature.HelpCommand().KeyBinding,
-		Execute:     executeCommandPalette,
-	})
+	// Register feature commands using auto-registration
+	feature.Register(func(cmd feature.CommandRegistration) {
+		var execFunc func(*model) tea.Cmd
 
-	// Register save command - uses feature's execution logic via EditorContext
-	saveCmd := feature.SaveCommand()
-	registerCommand(Command{
-		Name:        saveCmd.Name,
-		Key:         saveCmd.Key,
-		Description: saveCmd.Description,
-		KeyBinding:  saveCmd.KeyBinding,
-		Execute: func(m *model) tea.Cmd {
-			return saveCmd.Execute(m)
-		},
-	})
+		// Provide execute handlers for commands that need *model access
+		switch cmd.Name {
+		case "quit":
+			execFunc = executeQuit
+		case "help-show":
+			execFunc = executeCommandPalette
+		case "file-open":
+			execFunc = executeFileSwitcher
+		case "buffer-switch":
+			execFunc = executeBufferSwitcher
+		default:
+			// For commands with EditorContext execute (like save)
+			if cmd.Execute != nil {
+				execFunc = func(m *model) tea.Cmd {
+					return cmd.Execute(m)
+				}
+			}
+		}
 
-	registerCommand(Command{
-		Name:        feature.QuitCommand().Name,
-		Key:         feature.QuitCommand().Key,
-		Description: feature.QuitCommand().Description,
-		KeyBinding:  feature.QuitCommand().KeyBinding,
-		Execute:     executeQuit,
+		registerCommand(Command{
+			Name:        cmd.Name,
+			Key:         cmd.Key,
+			Description: cmd.Description,
+			KeyBinding:  cmd.KeyBinding,
+			Execute:     execFunc,
+		})
 	})
 
 	// Get filename from remaining command line args
