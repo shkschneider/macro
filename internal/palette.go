@@ -46,15 +46,6 @@ func init() {
 	})
 }
 
-// PaletteCommand returns the command definition for showing help
-func PaletteCommand() api.CommandDef {
-	return api.CommandDef{
-		Name:        CmdPalette,
-		Key:         "Ctrl-Space",
-		Description: "Show command palette",
-		KeyBinding:  PaletteKeyBinding,
-	}
-}
 
 // ====== Message Types ======
 

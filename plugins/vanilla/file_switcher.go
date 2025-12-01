@@ -45,15 +45,6 @@ func ExecuteFileSwitcher(ctx api.EditorContext) tea.Cmd {
 	return nil
 }
 
-// FileSwitcherCommand returns the command definition for file switching
-func FileSwitcherCommand() api.CommandDef {
-	return api.CommandDef{
-		Name:        CmdFileOpen,
-		Key:         "Ctrl-P",
-		Description: "Open file switcher",
-		KeyBinding:  FileSwitcherKeyBinding,
-	}
-}
 
 // ====== Message Types ======
 

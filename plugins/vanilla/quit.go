@@ -33,12 +33,3 @@ func ExecuteQuit(ctx api.EditorContext) tea.Cmd {
 	return tea.Quit
 }
 
-// QuitCommand returns the command definition for quitting
-func QuitCommand() api.CommandDef {
-	return api.CommandDef{
-		Name:        CmdQuit,
-		Key:         "Ctrl-Q",
-		Description: "Quit the editor",
-		KeyBinding:  QuitKeyBinding,
-	}
-}
