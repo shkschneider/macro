@@ -6,19 +6,19 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	feature "github.com/shkschneider/macro/feature"
+	vanilla "github.com/shkschneider/macro/features/vanilla"
 )
 
 func TestFeatureKeyBinding_Quit(t *testing.T) {
 	msg := tea.KeyMsg{Type: tea.KeyCtrlQ}
-	if !key.Matches(msg, feature.QuitKeyBinding) {
+	if !key.Matches(msg, vanilla.QuitKeyBinding) {
 		t.Error("Ctrl+Q should match Quit binding")
 	}
 }
 
 func TestFeatureKeyBinding_Save(t *testing.T) {
 	msg := tea.KeyMsg{Type: tea.KeyCtrlS}
-	if !key.Matches(msg, feature.SaveKeyBinding) {
+	if !key.Matches(msg, vanilla.SaveKeyBinding) {
 		t.Error("Ctrl+S should match Save binding")
 	}
 }
@@ -31,7 +31,7 @@ func TestFeatureKeyBinding_FileOpen(t *testing.T) {
 		Alt:   false,
 	}
 	msg.Type = tea.KeyCtrlP
-	if !key.Matches(msg, feature.FileSwitcherKeyBinding) {
+	if !key.Matches(msg, vanilla.FileSwitcherKeyBinding) {
 		t.Error("Ctrl+P should match FileOpen binding")
 	}
 }
@@ -41,7 +41,7 @@ func TestFeatureKeyBinding_BufferSwitch(t *testing.T) {
 	msg := tea.KeyMsg{
 		Type: tea.KeyCtrlB,
 	}
-	if !key.Matches(msg, feature.BufferSwitcherKeyBinding) {
+	if !key.Matches(msg, vanilla.BufferSwitcherKeyBinding) {
 		t.Error("Ctrl+B should match BufferSwitch binding")
 	}
 }
@@ -49,7 +49,7 @@ func TestFeatureKeyBinding_BufferSwitch(t *testing.T) {
 func TestFeatureKeyBinding_CommandPalette(t *testing.T) {
 	// Test ctrl+@ (which is what ctrl+space sends)
 	msg := tea.KeyMsg{Type: tea.KeyCtrlAt}
-	if !key.Matches(msg, feature.HelpKeyBinding) {
+	if !key.Matches(msg, vanilla.HelpKeyBinding) {
 		t.Error("Ctrl+@ (Ctrl+Space) should match CommandPalette binding")
 	}
 }
@@ -60,11 +60,11 @@ func TestFeatureKeyBindings_AllHaveHelp(t *testing.T) {
 		name    string
 		binding key.Binding
 	}{
-		{"Quit", feature.QuitKeyBinding},
-		{"Save", feature.SaveKeyBinding},
-		{"CommandPalette", feature.HelpKeyBinding},
-		{"FileOpen", feature.FileSwitcherKeyBinding},
-		{"BufferSwitch", feature.BufferSwitcherKeyBinding},
+		{"Quit", vanilla.QuitKeyBinding},
+		{"Save", vanilla.SaveKeyBinding},
+		{"CommandPalette", vanilla.HelpKeyBinding},
+		{"FileOpen", vanilla.FileSwitcherKeyBinding},
+		{"BufferSwitch", vanilla.BufferSwitcherKeyBinding},
 	}
 
 	for _, b := range bindings {
@@ -85,14 +85,14 @@ func TestGetCommandByKey_ReturnsCorrectCommand(t *testing.T) {
 		Name:        "test-quit",
 		Key:         "Ctrl-Q",
 		Description: "Test quit",
-		KeyBinding:  feature.QuitKeyBinding,
+		KeyBinding:  vanilla.QuitKeyBinding,
 		Execute:     nil,
 	})
 	registerCommand(Command{
 		Name:        "test-save",
 		Key:         "Ctrl-S",
 		Description: "Test save",
-		KeyBinding:  feature.SaveKeyBinding,
+		KeyBinding:  vanilla.SaveKeyBinding,
 		Execute:     nil,
 	})
 

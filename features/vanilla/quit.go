@@ -1,4 +1,4 @@
-package feature
+package vanilla
 
 import (
 	"github.com/charmbracelet/bubbles/key"

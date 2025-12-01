@@ -12,7 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/dustin/go-humanize"
 	core "github.com/shkschneider/macro/core"
-	feature "github.com/shkschneider/macro/feature"
+	vanilla "github.com/shkschneider/macro/features/vanilla"
 )
 
 var (
@@ -189,7 +189,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Handle custom dialog result messages
 	switch msg := msg.(type) {
-	case feature.FileSelectedMsg:
+	case vanilla.FileSelectedMsg:
 		// Save current buffer state before opening new file
 		m.saveCurrentBufferState()
 		// Load the selected file into a new buffer
@@ -213,7 +213,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case feature.BufferSelectedMsg:
+	case vanilla.BufferSelectedMsg:
 		// Save current buffer state before switching
 		m.saveCurrentBufferState()
 		// Switch to selected buffer
@@ -221,7 +221,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.message = fmt.Sprintf("Switched to buffer")
 		return m, nil
 
-	case feature.CommandSelectedMsg:
+	case vanilla.CommandSelectedMsg:
 		// Execute the selected command
 		cmd := getCommandByName(msg.CommandName)
 		if cmd != nil && cmd.Execute != nil {
@@ -324,7 +324,7 @@ func executeQuit(m *model) tea.Cmd {
 // executeFileSwitcher opens the file switcher dialog
 func executeFileSwitcher(m *model) tea.Cmd {
 	if m.getCurrentFilePath() != "" {
-		m.activeDialog = feature.NewFileDialog(filepath.Dir(m.getCurrentFilePath()))
+		m.activeDialog = vanilla.NewFileDialog(filepath.Dir(m.getCurrentFilePath()))
 		return m.activeDialog.Init()
 	}
 	m.message = "No file open to determine directory"
@@ -342,7 +342,7 @@ func executeBufferSwitcher(m *model) tea.Cmd {
 				ReadOnly: buf.readOnly,
 			})
 		}
-		m.activeDialog = feature.NewBufferDialog(bufferInfos, m.currentBuffer)
+		m.activeDialog = vanilla.NewBufferDialog(bufferInfos, m.currentBuffer)
 		return m.activeDialog.Init()
 	}
 	m.message = "No buffers open"
@@ -360,7 +360,7 @@ func executeCommandPalette(m *model) tea.Cmd {
 			Description: cmd.Description,
 		})
 	}
-	m.activeDialog = feature.NewHelpDialog(commands)
+	m.activeDialog = vanilla.NewHelpDialog(commands)
 	return m.activeDialog.Init()
 }
 

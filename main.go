@@ -6,7 +6,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	feature "github.com/shkschneider/macro/feature"
+	vanilla "github.com/shkschneider/macro/features/vanilla"
 )
 
 // ReadOnlyMode defines the mode for read-only handling
@@ -42,18 +42,18 @@ func main() {
 	}
 
 	// Register feature commands using auto-registration
-	feature.Register(func(cmd feature.CommandRegistration) {
+	vanilla.Register(func(cmd vanilla.CommandRegistration) {
 		var execFunc func(*model) tea.Cmd
 
 		// Provide execute handlers for commands that need *model access
 		switch cmd.Name {
-		case feature.CmdQuit:
+		case vanilla.CmdQuit:
 			execFunc = executeQuit
-		case feature.CmdHelp:
+		case vanilla.CmdHelp:
 			execFunc = executeCommandPalette
-		case feature.CmdFileOpen:
+		case vanilla.CmdFileOpen:
 			execFunc = executeFileSwitcher
-		case feature.CmdBufferSwitch:
+		case vanilla.CmdBufferSwitch:
 			execFunc = executeBufferSwitcher
 		default:
 			// For commands with EditorContext execute (like save)
