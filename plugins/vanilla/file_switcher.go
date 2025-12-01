@@ -1,4 +1,4 @@
-package feature
+package vanilla
 
 import (
 	"fmt"
@@ -10,17 +10,48 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sahilm/fuzzy"
-	macro "github.com/shkschneider/macro/core"
+	"github.com/shkschneider/macro/api"
 )
 
 // ====== Command Registration ======
 
+// CmdFileOpen is the command name constant for file switcher
+const CmdFileOpen = "file-open"
+
+// FileSwitcherKeyBinding is the key binding for the file switcher command
+var FileSwitcherKeyBinding = key.NewBinding(
+	key.WithKeys("ctrl+p"),
+	key.WithHelp("ctrl+p", "open file switcher"),
+)
+
+func init() {
+	api.RegisterCommand(api.CommandRegistration{
+		Name:          CmdFileOpen,
+		Key:           "Ctrl-P",
+		Description:   "Open file switcher",
+		KeyBinding:    FileSwitcherKeyBinding,
+		PluginExecute: ExecuteFileSwitcher,
+	})
+}
+
+// ExecuteFileSwitcher opens the file switcher dialog
+func ExecuteFileSwitcher(ctx api.EditorContext) tea.Cmd {
+	filePath := ctx.GetCurrentFilePath()
+	if filePath != "" {
+		dialog := NewFileDialog(filepath.Dir(filePath))
+		return ctx.SetActiveDialog(dialog)
+	}
+	ctx.SetMessage("No file open to determine directory")
+	return nil
+}
+
 // FileSwitcherCommand returns the command definition for file switching
-func FileSwitcherCommand() macro.CommandDef {
-	return macro.CommandDef{
-		Name:        "file-open",
-		Key:         "Ctrl-Space",
+func FileSwitcherCommand() api.CommandDef {
+	return api.CommandDef{
+		Name:        CmdFileOpen,
+		Key:         "Ctrl-P",
 		Description: "Open file switcher",
+		KeyBinding:  FileSwitcherKeyBinding,
 	}
 }
 
@@ -29,6 +60,18 @@ func FileSwitcherCommand() macro.CommandDef {
 // FileSelectedMsg is sent when a file is selected in the file dialog
 type FileSelectedMsg struct {
 	Path string
+}
+
+// Handle implements api.PluginMsg - opens the selected file
+func (msg FileSelectedMsg) Handle(ctx api.EditorContext) tea.Cmd {
+	ctx.SaveCurrentBufferState()
+	if err := ctx.OpenFile(msg.Path); err != nil {
+		ctx.SetMessage(fmt.Sprintf("Error loading file: %v", err))
+		ctx.SetError(err)
+	} else {
+		ctx.SetMessage(fmt.Sprintf("Opened %s", filepath.Base(msg.Path)))
+	}
+	return nil
 }
 
 // ====== Key Bindings ======
@@ -119,7 +162,7 @@ func (d *FileDialog) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (d *FileDialog) Update(msg tea.Msg) (macro.Dialog, tea.Cmd) {
+func (d *FileDialog) Update(msg tea.Msg) (api.Dialog, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if key.Matches(msg, DefaultFileDialogKeyMap.Close) {
@@ -237,11 +280,11 @@ func (d *FileDialog) View(termWidth, termHeight int) string {
 		file := d.filteredFiles[i]
 		line := ""
 		if i == d.selectedIdx {
-			line = macro.DialogHighlightedStyle.
+			line = api.DialogHighlightedStyle.
 				Width(dialogWidth - 4).
 				Render("> " + file.name)
 		} else {
-			line = macro.DialogItemStyle.
+			line = api.DialogItemStyle.
 				Width(dialogWidth - 4).
 				Render("  " + file.name)
 		}
@@ -253,21 +296,21 @@ func (d *FileDialog) View(termWidth, termHeight int) string {
 		fileListView.WriteString(strings.Repeat(" ", dialogWidth-4) + "\n")
 	}
 
-	title := macro.DialogTitleStyle.Render("File Switcher")
+	title := api.DialogTitleStyle.Render("File Switcher")
 	fileCount := fmt.Sprintf("(%d/%d files)", len(d.filteredFiles), len(d.allFiles))
-	titleLine := macro.DialogTitleLineStyle.
+	titleLine := api.DialogTitleLineStyle.
 		Width(dialogWidth - 4).
-		Render(title + " " + macro.DialogCountStyle.Render(fileCount))
+		Render(title + " " + api.DialogCountStyle.Render(fileCount))
 
-	separator := macro.DialogSeparatorStyle.
+	separator := api.DialogSeparatorStyle.
 		Render(strings.Repeat("─", dialogWidth-4))
 
-	inputLabel := macro.DialogInputLabelStyle.
+	inputLabel := api.DialogInputLabelStyle.
 		Render("Filter: ")
 
 	inputView := inputLabel + d.filterInput.View()
 
-	instructions := macro.DialogInstructionsStyle.
+	instructions := api.DialogInstructionsStyle.
 		Render("↑/↓: Navigate | Enter: Open | Esc: Close")
 
 	fullContent := fmt.Sprintf("%s\n%s\n%s\n%s\n%s",
@@ -278,7 +321,7 @@ func (d *FileDialog) View(termWidth, termHeight int) string {
 		instructions,
 	)
 
-	return macro.DialogBoxStyle.Render(fullContent)
+	return api.DialogBoxStyle.Render(fullContent)
 }
 
 func (d *FileDialog) IsVisible() bool {

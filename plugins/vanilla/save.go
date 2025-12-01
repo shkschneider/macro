@@ -1,25 +1,46 @@
-package feature
+package vanilla
 
 import (
 	"fmt"
 	"os"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	macro "github.com/shkschneider/macro/core"
+	"github.com/shkschneider/macro/api"
 )
 
+// CmdSave is the command name constant for save
+const CmdSave = "file-save"
+
+// SaveKeyBinding is the key binding for the save command
+var SaveKeyBinding = key.NewBinding(
+	key.WithKeys("ctrl+s"),
+	key.WithHelp("ctrl+s", "save file"),
+)
+
+func init() {
+	api.RegisterCommand(api.CommandRegistration{
+		Name:          CmdSave,
+		Key:           "Ctrl-S",
+		Description:   "Save current buffer to disk",
+		KeyBinding:    SaveKeyBinding,
+		PluginExecute: executeSave,
+	})
+}
+
 // SaveCommand returns the command definition for saving files with execution logic
-func SaveCommand() macro.FeatureCommand {
-	return macro.FeatureCommand{
-		Name:        "file-save",
+func SaveCommand() api.PluginCommand {
+	return api.PluginCommand{
+		Name:        CmdSave,
 		Key:         "Ctrl-S",
 		Description: "Save current buffer to disk",
+		KeyBinding:  SaveKeyBinding,
 		Execute:     executeSave,
 	}
 }
 
 // executeSave saves the current buffer to disk
-func executeSave(ctx macro.EditorContext) tea.Cmd {
+func executeSave(ctx api.EditorContext) tea.Cmd {
 	if ctx.IsCurrentBufferReadOnly() {
 		ctx.SetMessage("WARNING: Cannot save - file is read-only")
 		return nil

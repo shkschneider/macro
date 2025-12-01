@@ -6,23 +6,10 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	feature "github.com/shkschneider/macro/feature"
+	"github.com/shkschneider/macro/api"
+	"github.com/shkschneider/macro/internal"
+	_ "github.com/shkschneider/macro/plugins/vanilla" // Import to trigger init()
 )
-
-// ReadOnlyMode defines the mode for read-only handling
-type ReadOnlyMode int
-
-const (
-	// ReadOnlyAuto - detect from file permissions (default)
-	ReadOnlyAuto ReadOnlyMode = iota
-	// ReadOnlyForced - force read-only mode
-	ReadOnlyForced
-	// ReadWriteForced - force read-write mode (if file is writable)
-	ReadWriteForced
-)
-
-// Global read-only mode setting
-var globalReadOnlyMode = ReadOnlyAuto
 
 func main() {
 	// Parse command line flags
@@ -35,48 +22,28 @@ func main() {
 		fmt.Println("Error: Cannot use both -ro and -rw flags")
 		os.Exit(1)
 	}
-	if *forceRO {
-		globalReadOnlyMode = ReadOnlyForced
-	} else if *forceRW {
-		globalReadOnlyMode = ReadWriteForced
-	}
 
-	// Register feature commands
-	registerCommand(Command{
-		Name:        feature.FileSwitcherCommand().Name,
-		Key:         feature.FileSwitcherCommand().Key,
-		Description: feature.FileSwitcherCommand().Description,
-		Execute:     executeFileSwitcher,
-	})
-	registerCommand(Command{
-		Name:        feature.BufferSwitcherCommand().Name,
-		Key:         feature.BufferSwitcherCommand().Key,
-		Description: feature.BufferSwitcherCommand().Description,
-		Execute:     executeBufferSwitcher,
-	})
-	registerCommand(Command{
-		Name:        feature.HelpCommand().Name,
-		Key:         feature.HelpCommand().Key,
-		Description: feature.HelpCommand().Description,
-		Execute:     executeCommandPalette,
-	})
+	// Register all feature commands using auto-registration from api registry
+	api.Register(func(cmd api.CommandRegistration) {
+		var execFunc func(*internal.Model) tea.Cmd
 
-	// Register save command - uses feature's execution logic via EditorContext
-	saveCmd := feature.SaveCommand()
-	registerCommand(Command{
-		Name:        saveCmd.Name,
-		Key:         saveCmd.Key,
-		Description: saveCmd.Description,
-		Execute: func(m *model) tea.Cmd {
-			return saveCmd.Execute(m)
-		},
-	})
+		// Special case: Help command needs access to CommandRegistry
+		if cmd.Name == internal.CmdPalette {
+			execFunc = internal.ExecuteCommandPalette
+		} else if cmd.PluginExecute != nil {
+			// Use the plugin's execute function via EditorContext
+			execFunc = func(m *internal.Model) tea.Cmd {
+				return cmd.PluginExecute(m)
+			}
+		}
 
-	registerCommand(Command{
-		Name:        feature.QuitCommand().Name,
-		Key:         feature.QuitCommand().Key,
-		Description: feature.QuitCommand().Description,
-		Execute:     executeQuit,
+		internal.RegisterCommand(internal.Command{
+			Name:        cmd.Name,
+			Key:         cmd.Key,
+			Description: cmd.Description,
+			KeyBinding:  cmd.KeyBinding,
+			Execute:     execFunc,
+		})
 	})
 
 	// Get filename from remaining command line args
@@ -86,7 +53,7 @@ func main() {
 		filePath = args[0]
 	}
 
-	p := tea.NewProgram(initialModel(filePath), tea.WithAltScreen())
+	p := tea.NewProgram(internal.InitialModel(filePath), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)

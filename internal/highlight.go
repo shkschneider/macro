@@ -1,5 +1,5 @@
 // Package core provides core functionality for the macro editor.
-package core
+package internal
 
 import (
 	"bytes"
