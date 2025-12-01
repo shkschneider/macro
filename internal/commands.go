@@ -12,8 +12,8 @@ import (
 func ExecuteQuit(m *Model) tea.Cmd {
 	// Save cursor state before quitting
 	m.saveCurrentBufferState()
-	if m.cursorState != nil {
-		_ = m.cursorState.Save()
+	if m.CursorState != nil {
+		_ = m.CursorState.Save()
 	}
 	return tea.Quit
 }
@@ -21,28 +21,28 @@ func ExecuteQuit(m *Model) tea.Cmd {
 // executeFileSwitcher opens the file switcher dialog
 func ExecuteFileSwitcher(m *Model) tea.Cmd {
 	if m.getCurrentFilePath() != "" {
-		m.activeDialog = vanilla.NewFileDialog(filepath.Dir(m.getCurrentFilePath()))
-		return m.activeDialog.Init()
+		m.ActiveDialog = vanilla.NewFileDialog(filepath.Dir(m.getCurrentFilePath()))
+		return m.ActiveDialog.Init()
 	}
-	m.message = "No file open to determine directory"
+	m.Message = "No file open to determine directory"
 	return nil
 }
 
 // executeBufferSwitcher opens the buffer switcher dialog
 func ExecuteBufferSwitcher(m *Model) tea.Cmd {
-	if len(m.buffers) > 0 {
+	if len(m.Buffers) > 0 {
 		// Convert buffers to BufferInfo
 		var bufferInfos []api.BufferInfo
-		for _, buf := range m.buffers {
+		for _, buf := range m.Buffers {
 			bufferInfos = append(bufferInfos, api.BufferInfo{
-				FilePath: buf.filePath,
-				ReadOnly: buf.readOnly,
+				FilePath: buf.FilePath,
+				ReadOnly: buf.ReadOnly,
 			})
 		}
-		m.activeDialog = vanilla.NewBufferDialog(bufferInfos, m.currentBuffer)
-		return m.activeDialog.Init()
+		m.ActiveDialog = vanilla.NewBufferDialog(bufferInfos, m.CurrentBuffer)
+		return m.ActiveDialog.Init()
 	}
-	m.message = "No buffers open"
+	m.Message = "No buffers open"
 	return nil
 }
 
@@ -57,6 +57,6 @@ func ExecuteCommandPalette(m *Model) tea.Cmd {
 			Description: cmd.Description,
 		})
 	}
-	m.activeDialog = vanilla.NewHelpDialog(commands)
-	return m.activeDialog.Init()
+	m.ActiveDialog = vanilla.NewHelpDialog(commands)
+	return m.ActiveDialog.Init()
 }

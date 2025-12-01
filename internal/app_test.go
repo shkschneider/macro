@@ -80,15 +80,15 @@ func TestFeatureKeyBindings_AllHaveHelp(t *testing.T) {
 
 func TestGetCommandByKey_ReturnsCorrectCommand(t *testing.T) {
 	// Register commands for testing
-	commandRegistry = nil // Reset registry
-	registerCommand(Command{
+	CommandRegistry = nil // Reset registry
+	RegisterCommand(Command{
 		Name:        "test-quit",
 		Key:         "Ctrl-Q",
 		Description: "Test quit",
 		KeyBinding:  vanilla.QuitKeyBinding,
 		Execute:     nil,
 	})
-	registerCommand(Command{
+	RegisterCommand(Command{
 		Name:        "test-save",
 		Key:         "Ctrl-S",
 		Description: "Test save",
@@ -98,82 +98,82 @@ func TestGetCommandByKey_ReturnsCorrectCommand(t *testing.T) {
 
 	// Test that Ctrl+Q matches quit command
 	quitMsg := tea.KeyMsg{Type: tea.KeyCtrlQ}
-	cmd := getCommandByKey(quitMsg)
+	cmd := GetCommandByKey(quitMsg)
 	if cmd == nil {
-		t.Error("getCommandByKey should return command for Ctrl+Q")
+		t.Error("GetCommandByKey should return command for Ctrl+Q")
 	} else if cmd.Name != "test-quit" {
-		t.Errorf("getCommandByKey returned wrong command, got %s, want test-quit", cmd.Name)
+		t.Errorf("GetCommandByKey returned wrong command, got %s, want test-quit", cmd.Name)
 	}
 
 	// Test that Ctrl+S matches save command
 	saveMsg := tea.KeyMsg{Type: tea.KeyCtrlS}
-	cmd = getCommandByKey(saveMsg)
+	cmd = GetCommandByKey(saveMsg)
 	if cmd == nil {
-		t.Error("getCommandByKey should return command for Ctrl+S")
+		t.Error("GetCommandByKey should return command for Ctrl+S")
 	} else if cmd.Name != "test-save" {
-		t.Errorf("getCommandByKey returned wrong command, got %s, want test-save", cmd.Name)
+		t.Errorf("GetCommandByKey returned wrong command, got %s, want test-save", cmd.Name)
 	}
 
 	// Test that unregistered key returns nil
 	unknownMsg := tea.KeyMsg{Type: tea.KeyCtrlX}
-	cmd = getCommandByKey(unknownMsg)
+	cmd = GetCommandByKey(unknownMsg)
 	if cmd != nil {
-		t.Error("getCommandByKey should return nil for unregistered key")
+		t.Error("GetCommandByKey should return nil for unregistered key")
 	}
 
 	// Reset registry
-	commandRegistry = nil
+	CommandRegistry = nil
 }
 
 func TestBuffer_IsModified(t *testing.T) {
 	// Test unmodified buffer
 	buf := Buffer{
-		filePath:        "/path/to/test.go",
-		content:         "original content",
-		originalContent: "original content",
-		readOnly:        false,
-		fileSize:        16,
+		FilePath:        "/path/to/test.go",
+		Content:         "original content",
+		OriginalContent: "original content",
+		ReadOnly:        false,
+		FileSize:        16,
 	}
 	if buf.IsModified() {
 		t.Error("Buffer should not be modified when content equals original")
 	}
 
 	// Test modified buffer
-	buf.content = "modified content"
+	buf.Content = "modified content"
 	if !buf.IsModified() {
 		t.Error("Buffer should be modified when content differs from original")
 	}
 }
 
 func TestBuildStatusBar_NewFile(t *testing.T) {
-	m := initialModel("")
+	m := InitialModel("")
 	// Set termWidth for test
-	termWidth = 80
+	TermWidth = 80
 
-	statusBar := m.buildStatusBar()
+	statusBar := m.BuildStatusBar()
 	if !strings.Contains(statusBar, "New File") {
 		t.Error("Status bar should show 'New File' when no buffer is loaded")
 	}
 }
 
 func TestBuildStatusBar_WithFile(t *testing.T) {
-	m := initialModel("")
+	m := InitialModel("")
 	// Set termWidth for test
-	termWidth = 120
+	TermWidth = 120
 
 	// Add a buffer
-	m.buffers = []Buffer{
+	m.Buffers = []Buffer{
 		{
-			filePath:        "/path/to/test.go",
-			content:         "package main",
-			originalContent: "package main",
-			readOnly:        false,
-			fileSize:        100,
+			FilePath:        "/path/to/test.go",
+			Content:         "package main",
+			OriginalContent: "package main",
+			ReadOnly:        false,
+			FileSize:        100,
 		},
 	}
-	m.currentBuffer = 0
+	m.CurrentBuffer = 0
 
-	statusBar := m.buildStatusBar()
+	statusBar := m.BuildStatusBar()
 
 	// Check left side content
 	if !strings.Contains(statusBar, "test.go") {
@@ -193,25 +193,25 @@ func TestBuildStatusBar_WithFile(t *testing.T) {
 }
 
 func TestBuildStatusBar_ModifiedFile(t *testing.T) {
-	m := initialModel("")
+	m := InitialModel("")
 	// Set termWidth for test
-	termWidth = 120
+	TermWidth = 120
 
 	// Add a buffer with modification tracking
-	m.buffers = []Buffer{
+	m.Buffers = []Buffer{
 		{
-			filePath:        "/path/to/test.go",
-			content:         "package modified",
-			originalContent: "package main",
-			readOnly:        false,
-			fileSize:        100,
+			FilePath:        "/path/to/test.go",
+			Content:         "package modified",
+			OriginalContent: "package main",
+			ReadOnly:        false,
+			FileSize:        100,
 		},
 	}
-	m.currentBuffer = 0
+	m.CurrentBuffer = 0
 	// Set the textarea value to simulate modification
-	m.syntaxTA.SetValue("package modified")
+	m.SyntaxTA.SetValue("package modified")
 
-	statusBar := m.buildStatusBar()
+	statusBar := m.BuildStatusBar()
 
 	// Modified file should have asterisk
 	if !strings.Contains(statusBar, "test.go*") {
@@ -220,23 +220,23 @@ func TestBuildStatusBar_ModifiedFile(t *testing.T) {
 }
 
 func TestBuildStatusBar_ReadOnlyFile(t *testing.T) {
-	m := initialModel("")
+	m := InitialModel("")
 	// Set termWidth for test
-	termWidth = 120
+	TermWidth = 120
 
 	// Add a read-only buffer
-	m.buffers = []Buffer{
+	m.Buffers = []Buffer{
 		{
-			filePath:        "/path/to/readonly.txt",
-			content:         "read only content",
-			originalContent: "read only content",
-			readOnly:        true,
-			fileSize:        17,
+			FilePath:        "/path/to/readonly.txt",
+			Content:         "read only content",
+			OriginalContent: "read only content",
+			ReadOnly:        true,
+			FileSize:        17,
 		},
 	}
-	m.currentBuffer = 0
+	m.CurrentBuffer = 0
 
-	statusBar := m.buildStatusBar()
+	statusBar := m.BuildStatusBar()
 
 	// Read-only file should have (read-only) indicator
 	if !strings.Contains(statusBar, "(read-only)") {
@@ -245,23 +245,23 @@ func TestBuildStatusBar_ReadOnlyFile(t *testing.T) {
 }
 
 func TestBuildStatusBar_CursorPosition(t *testing.T) {
-	m := initialModel("")
+	m := InitialModel("")
 	// Set termWidth for test
-	termWidth = 120
+	TermWidth = 120
 
 	// Add a buffer
-	m.buffers = []Buffer{
+	m.Buffers = []Buffer{
 		{
-			filePath:        "/path/to/test.go",
-			content:         "package main",
-			originalContent: "package main",
-			readOnly:        false,
-			fileSize:        100,
+			FilePath:        "/path/to/test.go",
+			Content:         "package main",
+			OriginalContent: "package main",
+			ReadOnly:        false,
+			FileSize:        100,
 		},
 	}
-	m.currentBuffer = 0
+	m.CurrentBuffer = 0
 
-	statusBar := m.buildStatusBar()
+	statusBar := m.BuildStatusBar()
 
 	// Status bar should contain cursor position in line:col format
 	// Default position is 1:1 (first line, first column)

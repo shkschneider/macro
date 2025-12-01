@@ -14,16 +14,16 @@ import (
 )
 
 type Model struct {
-	syntaxTA      *core.SyntaxTextarea
-	viewport      viewport.Model
-	filepicker    filepicker.Model
-	buffers       []Buffer // All open buffers
-	currentBuffer int      // Index of current buffer
-	message       string   // Message line for errors/warnings/info
-	err           error
-	showPicker    bool
-	activeDialog  api.Dialog         // Single active dialog (nil when closed)
-	cursorState   *core.CursorState   // Persistent cursor position storage
+	SyntaxTA      *core.SyntaxTextarea
+	Viewport      viewport.Model
+	Filepicker    filepicker.Model
+	Buffers       []Buffer // All open buffers
+	CurrentBuffer int      // Index of current buffer
+	Message       string   // Message line for errors/warnings/info
+	Err           error
+	ShowPicker    bool
+	ActiveDialog  api.Dialog        // Single active dialog (nil when closed)
+	CursorState   *core.CursorState // Persistent cursor position storage
 }
 
 func InitialModel(filePath string) Model {
@@ -37,36 +37,36 @@ func InitialModel(filePath string) Model {
 	vp := viewport.New(80, 24)
 
 	m := Model{
-		syntaxTA:      sta,
-		viewport:      vp,
-		filepicker:    fp,
-		buffers:       []Buffer{},
-		currentBuffer: -1, // No buffer open initially
-		message:       defaultMessage,
-		err:           nil,
-		showPicker:    false,
-		activeDialog:  nil,
-		cursorState:   core.NewCursorState(),
+		SyntaxTA:      sta,
+		Viewport:      vp,
+		Filepicker:    fp,
+		Buffers:       []Buffer{},
+		CurrentBuffer: -1, // No buffer open initially
+		Message:       defaultMessage,
+		Err:           nil,
+		ShowPicker:    false,
+		ActiveDialog:  nil,
+		CursorState:   core.NewCursorState(),
 	}
 
 	if filePath != "" {
 		info, err := os.Stat(filePath)
 		if err != nil {
-			m.message = fmt.Sprintf("Error: Error: %v | Ctrl-Q: Quit", err)
-			m.err = err
+			m.Message = fmt.Sprintf("Error: Error: %v | Ctrl-Q: Quit", err)
+			m.Err = err
 			return m
 		}
 		if info.IsDir() {
 			// It's a directory, show filepicker
-			m.showPicker = true
-			m.filepicker.CurrentDirectory = filePath
+			m.ShowPicker = true
+			m.Filepicker.CurrentDirectory = filePath
 		} else {
 			// It's a file, load it into first buffer
 			content, err := os.ReadFile(filePath)
 			if err != nil {
 				// Handle file read errors
-				m.message = fmt.Sprintf("Error: Cannot read file: %v | Ctrl-Q: Quit", err)
-				m.err = err
+				m.Message = fmt.Sprintf("Error: Cannot read file: %v | Ctrl-Q: Quit", err)
+				m.Err = err
 				return m
 			}
 			// Check if file is read-only based on permissions and CLI flags
@@ -75,14 +75,14 @@ func InitialModel(filePath string) Model {
 			// Create initial buffer with file size and original content tracking
 			contentStr := string(content)
 			buf := Buffer{
-				filePath:        filePath,
-				content:         contentStr,
-				originalContent: contentStr,
-				readOnly:        readOnly,
-				fileSize:        info.Size(),
+				FilePath:        filePath,
+				Content:         contentStr,
+				OriginalContent: contentStr,
+				ReadOnly:        readOnly,
+				FileSize:        info.Size(),
 			}
-			m.buffers = append(m.buffers, buf)
-			m.currentBuffer = 0
+			m.Buffers = append(m.Buffers, buf)
+			m.CurrentBuffer = 0
 
 			// Load buffer into UI
 			m.loadBuffer(0)
@@ -97,15 +97,15 @@ func InitialModel(filePath string) Model {
 func (m *Model) BuildStatusBar() string {
 	buf := m.getCurrentBuffer()
 	if buf == nil {
-		return core.StatusBarStyle.Width(termWidth).Render("New File")
+		return core.StatusBarStyle.Width(TermWidth).Render("New File")
 	}
 
 	// Get file info
-	fileName := filepath.Base(buf.filePath)
-	lang := core.DetectLanguage(buf.filePath)
-	dirPath := filepath.Dir(buf.filePath)
+	fileName := filepath.Base(buf.FilePath)
+	lang := core.DetectLanguage(buf.FilePath)
+	dirPath := filepath.Dir(buf.FilePath)
 	modified := m.isCurrentBufferModified()
-	readOnly := buf.readOnly
+	readOnly := buf.ReadOnly
 
 	// Build left side: "filename.ext* [language] | human filesize"
 	leftParts := []string{}
@@ -123,7 +123,7 @@ func (m *Model) BuildStatusBar() string {
 	}
 
 	// File size
-	leftParts = append(leftParts, humanize.Bytes(uint64(buf.fileSize)))
+	leftParts = append(leftParts, humanize.Bytes(uint64(buf.FileSize)))
 
 	if readOnly {
 		leftParts = append(leftParts, "(read-only)")
@@ -138,7 +138,7 @@ func (m *Model) BuildStatusBar() string {
 	// rightParts = append(rightParts, "[utf-8]")
 
 	// Cursor position (line:column)
-	line, col := m.syntaxTA.CursorPosition()
+	line, col := m.SyntaxTA.CursorPosition()
 	rightParts = append(rightParts, fmt.Sprintf("%d:%d", line, col))
 
 	// Directory path
@@ -149,7 +149,7 @@ func (m *Model) BuildStatusBar() string {
 	// Calculate padding needed to align right section
 	// Account for StatusBarStyle padding (1 on each side = 2 total)
 	padding := 2
-	contentWidth := termWidth - padding
+	contentWidth := TermWidth - padding
 	leftLen := len(leftSection)
 	rightLen := len(rightSection)
 	spacesNeeded := contentWidth - leftLen - rightLen
@@ -158,5 +158,5 @@ func (m *Model) BuildStatusBar() string {
 	}
 
 	fullStatusContent := leftSection + strings.Repeat(" ", spacesNeeded) + rightSection
-	return core.StatusBarStyle.Width(termWidth).Render(fullStatusContent)
+	return core.StatusBarStyle.Width(TermWidth).Render(fullStatusContent)
 }

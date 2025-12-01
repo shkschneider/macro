@@ -8,61 +8,61 @@ import (
 
 // Buffer represents an open file with its state
 type Buffer struct {
-	filePath        string
-	content         string
-	originalContent string // Original content for detecting modifications
-	fileSize        int64 // File size in bytes for display
-	readOnly        bool
-	cursorLine      int
-	cursorCol       int
+	FilePath        string
+	Content         string
+	OriginalContent string // Original content for detecting modifications
+	FileSize        int64  // File size in bytes for display
+	ReadOnly        bool
+	CursorLine      int
+	CursorCol       int
 }
 
 // IsModified returns true if the buffer content has been modified from the original
 func (b *Buffer) IsModified() bool {
-	return b.content != b.originalContent
+	return b.Content != b.OriginalContent
 }
 
 // moveCursorToTop moves the syntaxTA cursor to position (0,0)
 func (m *Model) moveCursorToTop() {
-	m.syntaxTA.CursorStart()
-	for m.syntaxTA.Line() > 0 {
-		m.syntaxTA.CursorUp()
+	m.SyntaxTA.CursorStart()
+	for m.SyntaxTA.Line() > 0 {
+		m.SyntaxTA.CursorUp()
 	}
 }
 
 // loadBuffer loads a buffer's content into the UI (syntaxTA or viewport)
 func (m *Model) loadBuffer(idx int) {
-	if idx < 0 || idx >= len(m.buffers) {
+	if idx < 0 || idx >= len(m.Buffers) {
 		return
 	}
 
-	buf := m.buffers[idx]
+	buf := m.Buffers[idx]
 
-	if buf.readOnly {
+	if buf.ReadOnly {
 		// Apply syntax highlighting for read-only files in viewport
-		highlightedContent := core.HighlightCode(buf.content, buf.filePath, "")
-		m.viewport.SetContent(highlightedContent)
-		m.viewport.GotoTop()
-		lang := core.DetectLanguage(buf.filePath)
+		highlightedContent := core.HighlightCode(buf.Content, buf.FilePath, "")
+		m.Viewport.SetContent(highlightedContent)
+		m.Viewport.GotoTop()
+		lang := core.DetectLanguage(buf.FilePath)
 		if lang != "" {
-			m.message = "WARNING: File is read-only. Editing disabled. [" + lang + "]"
+			m.Message = "WARNING: File is read-only. Editing disabled. [" + lang + "]"
 		} else {
-			m.message = "WARNING: File is read-only. Editing disabled."
+			m.Message = "WARNING: File is read-only. Editing disabled."
 		}
 	} else {
 		// Set filename for syntax highlighting and diff tracking
 		// SetFilename also sets up git diff tracking for git-tracked files
-		m.syntaxTA.SetFilename(buf.filePath)
-		m.syntaxTA.SetValue(buf.content)
+		m.SyntaxTA.SetFilename(buf.FilePath)
+		m.SyntaxTA.SetValue(buf.Content)
 
 		// Restore cursor position: first check buffer state, then fall back to cursor state
-		if buf.cursorLine > 0 || buf.cursorCol > 0 {
+		if buf.CursorLine > 0 || buf.CursorCol > 0 {
 			// Use buffer's cached cursor position
-			m.syntaxTA.SetCursorPosition(buf.cursorLine, buf.cursorCol)
-		} else if m.cursorState != nil {
+			m.SyntaxTA.SetCursorPosition(buf.CursorLine, buf.CursorCol)
+		} else if m.CursorState != nil {
 			// Try to restore from persistent storage
-			if pos, ok := m.cursorState.GetPosition(buf.filePath); ok {
-				m.syntaxTA.SetCursorPosition(pos.Line, pos.Column)
+			if pos, ok := m.CursorState.GetPosition(buf.FilePath); ok {
+				m.SyntaxTA.SetCursorPosition(pos.Line, pos.Column)
 			} else {
 				m.moveCursorToTop()
 			}
@@ -70,31 +70,31 @@ func (m *Model) loadBuffer(idx int) {
 			m.moveCursorToTop()
 		}
 
-		lang := core.DetectLanguage(buf.filePath)
+		lang := core.DetectLanguage(buf.FilePath)
 		if lang != "" {
-			m.message = defaultMessage + " [" + lang + "]"
+			m.Message = defaultMessage + " [" + lang + "]"
 		} else {
-			m.message = defaultMessage
+			m.Message = defaultMessage
 		}
 	}
-	m.currentBuffer = idx
+	m.CurrentBuffer = idx
 }
 
 // saveCurrentBufferState saves the current UI state to the current buffer
 func (m *Model) saveCurrentBufferState() {
-	if m.currentBuffer < 0 || m.currentBuffer >= len(m.buffers) {
+	if m.CurrentBuffer < 0 || m.CurrentBuffer >= len(m.Buffers) {
 		return
 	}
 
-	buf := &m.buffers[m.currentBuffer]
-	if !buf.readOnly {
-		buf.content = m.syntaxTA.Value()
-		buf.cursorLine = m.syntaxTA.Line()
-		buf.cursorCol = m.syntaxTA.Column()
+	buf := &m.Buffers[m.CurrentBuffer]
+	if !buf.ReadOnly {
+		buf.Content = m.SyntaxTA.Value()
+		buf.CursorLine = m.SyntaxTA.Line()
+		buf.CursorCol = m.SyntaxTA.Column()
 
 		// Persist to cursor state storage
-		if m.cursorState != nil {
-			m.cursorState.SetPosition(buf.filePath, buf.cursorLine, buf.cursorCol)
+		if m.CursorState != nil {
+			m.CursorState.SetPosition(buf.FilePath, buf.CursorLine, buf.CursorCol)
 		}
 	}
 }
@@ -102,49 +102,49 @@ func (m *Model) saveCurrentBufferState() {
 // addBuffer adds a new buffer or switches to existing one if file already open
 func (m *Model) addBuffer(filePath string, content string, readOnly bool, fileSize int64) int {
 	// Check if buffer already exists
-	for i, buf := range m.buffers {
-		if buf.filePath == filePath {
+	for i, buf := range m.Buffers {
+		if buf.FilePath == filePath {
 			return i // Return existing buffer index
 		}
 	}
 
 	// Create new buffer
 	buf := Buffer{
-		filePath:        filePath,
-		content:         content,
-		originalContent: content, // Store original for modification tracking
-		readOnly:        readOnly,
-		fileSize:        fileSize,
-		cursorLine:      0,
-		cursorCol:       0,
+		FilePath:        filePath,
+		Content:         content,
+		OriginalContent: content, // Store original for modification tracking
+		ReadOnly:        readOnly,
+		FileSize:        fileSize,
+		CursorLine:      0,
+		CursorCol:       0,
 	}
-	m.buffers = append(m.buffers, buf)
-	return len(m.buffers) - 1
+	m.Buffers = append(m.Buffers, buf)
+	return len(m.Buffers) - 1
 }
 
 // getCurrentFilePath returns the file path of the current buffer
 func (m *Model) getCurrentFilePath() string {
-	if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
-		return m.buffers[m.currentBuffer].filePath
+	if m.CurrentBuffer >= 0 && m.CurrentBuffer < len(m.Buffers) {
+		return m.Buffers[m.CurrentBuffer].FilePath
 	}
 	return ""
 }
 
 // isCurrentBufferReadOnly returns whether the current buffer is read-only
 func (m *Model) isCurrentBufferReadOnly() bool {
-	if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
-		return m.buffers[m.currentBuffer].readOnly
+	if m.CurrentBuffer >= 0 && m.CurrentBuffer < len(m.Buffers) {
+		return m.Buffers[m.CurrentBuffer].ReadOnly
 	}
 	return false
 }
 
 // isCurrentBufferModified returns whether the current buffer has been modified
 func (m *Model) isCurrentBufferModified() bool {
-	if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
-		buf := &m.buffers[m.currentBuffer]
+	if m.CurrentBuffer >= 0 && m.CurrentBuffer < len(m.Buffers) {
+		buf := &m.Buffers[m.CurrentBuffer]
 		// For editable buffers, check current textarea content against original
-		if !buf.readOnly {
-			return m.syntaxTA.Value() != buf.originalContent
+		if !buf.ReadOnly {
+			return m.SyntaxTA.Value() != buf.OriginalContent
 		}
 		return buf.IsModified()
 	}
@@ -153,16 +153,16 @@ func (m *Model) isCurrentBufferModified() bool {
 
 // getCurrentBuffer returns the current buffer, or nil if none is selected
 func (m *Model) getCurrentBuffer() *Buffer {
-	if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
-		return &m.buffers[m.currentBuffer]
+	if m.CurrentBuffer >= 0 && m.CurrentBuffer < len(m.Buffers) {
+		return &m.Buffers[m.CurrentBuffer]
 	}
 	return nil
 }
 
 // getDirectoryPath returns the directory portion of the current file path
 func (m *Model) getDirectoryPath() string {
-	if m.currentBuffer >= 0 && m.currentBuffer < len(m.buffers) {
-		return filepath.Dir(m.buffers[m.currentBuffer].filePath)
+	if m.CurrentBuffer >= 0 && m.CurrentBuffer < len(m.Buffers) {
+		return filepath.Dir(m.Buffers[m.CurrentBuffer].FilePath)
 	}
 	return ""
 }
@@ -182,7 +182,7 @@ func (m *Model) GetCurrentFilePath() string {
 
 // GetCurrentContent implements api.EditorContext
 func (m *Model) GetCurrentContent() string {
-	return m.syntaxTA.Value()
+	return m.SyntaxTA.Value()
 }
 
 // SaveCurrentBufferState implements api.EditorContext
@@ -193,17 +193,17 @@ func (m *Model) SaveCurrentBufferState() {
 // UpdateBufferAfterSave implements api.EditorContext
 func (m *Model) UpdateBufferAfterSave(content string, fileSize int64) {
 	if buf := m.getCurrentBuffer(); buf != nil {
-		buf.originalContent = content
-		buf.fileSize = fileSize
+		buf.OriginalContent = content
+		buf.FileSize = fileSize
 	}
 }
 
 // SetMessage implements api.EditorContext
 func (m *Model) SetMessage(msg string) {
-	m.message = msg
+	m.Message = msg
 }
 
 // SetError implements api.EditorContext
 func (m *Model) SetError(err error) {
-	m.err = err
+	m.Err = err
 }

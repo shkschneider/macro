@@ -14,8 +14,8 @@ import (
 
 var (
 	defaultMessage = "Macro v0.11.0 | Hit Ctrl-Space for Command Palette."
-	termWidth      = 0 // Will be updated on WindowSizeMsg
-	termHeight     = 0 // Will be updated on WindowSizeMsg
+	TermWidth      = 0 // Will be updated on WindowSizeMsg
+	TermHeight     = 0 // Will be updated on WindowSizeMsg
 )
 
 // ReadOnlyMode defines the mode for read-only handling
@@ -50,25 +50,25 @@ func determineReadOnly(info os.FileInfo) bool {
 }
 
 func (m Model) Init() tea.Cmd {
-	if m.showPicker {
-		return m.filepicker.Init()
+	if m.ShowPicker {
+		return m.Filepicker.Init()
 	}
-	return m.syntaxTA.Focus()
+	return m.SyntaxTA.Focus()
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	// If showing filepicker, handle filepicker messages
-	if m.showPicker {
+	if m.ShowPicker {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			// Check if quit command key is pressed
 			if cmd := GetCommandByKey(msg); cmd != nil && cmd.Name == "quit" {
 				// Save cursor state before quitting
 				m.saveCurrentBufferState()
-				if m.cursorState != nil {
-					_ = m.cursorState.Save()
+				if m.CursorState != nil {
+					_ = m.CursorState.Save()
 				}
 				return m, tea.Quit
 			}
@@ -77,14 +77,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if pickerHeight < 1 {
 				pickerHeight = 1
 			}
-			m.filepicker.SetHeight(pickerHeight)
-			termWidth = msg.Width
-			termHeight = msg.Height
+			m.Filepicker.SetHeight(pickerHeight)
+			TermWidth = msg.Width
+			TermHeight = msg.Height
 		}
 
-		m.filepicker, cmd = m.filepicker.Update(msg)
+		m.Filepicker, cmd = m.Filepicker.Update(msg)
 
-		if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
+		if didSelect, path := m.Filepicker.DidSelectFile(msg); didSelect {
 			content, err := os.ReadFile(path)
 			if err == nil {
 				info, statErr := os.Stat(path)
@@ -97,39 +97,39 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				bufferIdx := m.addBuffer(path, string(content), readOnly, fileSize)
 				m.loadBuffer(bufferIdx)
-				m.message = defaultMessage
-				m.err = nil
+				m.Message = defaultMessage
+				m.Err = nil
 			} else {
-				m.message = fmt.Sprintf("Error loading file: %v", err)
-				m.err = err
+				m.Message = fmt.Sprintf("Error loading file: %v", err)
+				m.Err = err
 			}
-			m.showPicker = false
+			m.ShowPicker = false
 
-			if termHeight > 0 {
-				contentHeight := termHeight - 2
+			if TermHeight > 0 {
+				contentHeight := TermHeight - 2
 				if contentHeight < 1 {
 					contentHeight = 1
 				}
-				m.syntaxTA.SetWidth(termWidth)
-				m.syntaxTA.SetHeight(contentHeight)
-				m.viewport.Width = termWidth
-				m.viewport.Height = contentHeight
+				m.SyntaxTA.SetWidth(TermWidth)
+				m.SyntaxTA.SetHeight(contentHeight)
+				m.Viewport.Width = TermWidth
+				m.Viewport.Height = contentHeight
 			}
 
-			m.syntaxTA.Focus()
-			return m, m.syntaxTA.Focus()
+			m.SyntaxTA.Focus()
+			return m, m.SyntaxTA.Focus()
 		}
 
 		return m, cmd
 	}
 
 	// If showing dialog, handle dialog messages
-	if m.activeDialog != nil {
-		m.activeDialog, cmd = m.activeDialog.Update(msg)
+	if m.ActiveDialog != nil {
+		m.ActiveDialog, cmd = m.ActiveDialog.Update(msg)
 
 		// Check if dialog was closed
-		if !m.activeDialog.IsVisible() {
-			m.activeDialog = nil
+		if !m.ActiveDialog.IsVisible() {
+			m.ActiveDialog = nil
 		}
 
 		// Return immediately to prevent the message from reaching the underlying buffer
@@ -155,11 +155,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			bufferIdx := m.addBuffer(msg.Path, string(content), readOnly, fileSize)
 			m.loadBuffer(bufferIdx)
-			m.message = fmt.Sprintf("Opened %s", filepath.Base(msg.Path))
-			m.err = nil
+			m.Message = fmt.Sprintf("Opened %s", filepath.Base(msg.Path))
+			m.Err = nil
 		} else {
-			m.message = fmt.Sprintf("Error loading file: %v", err)
-			m.err = err
+			m.Message = fmt.Sprintf("Error loading file: %v", err)
+			m.Err = err
 		}
 		return m, nil
 
@@ -168,7 +168,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.saveCurrentBufferState()
 		// Switch to selected buffer
 		m.loadBuffer(msg.Index)
-		m.message = fmt.Sprintf("Switched to buffer")
+		m.Message = fmt.Sprintf("Switched to buffer")
 		return m, nil
 
 	case vanilla.CommandSelectedMsg:
@@ -191,43 +191,43 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			contentHeight = 1
 		}
 
-		m.syntaxTA.SetWidth(msg.Width)
-		m.syntaxTA.SetHeight(contentHeight)
-		m.viewport.Width = msg.Width
-		m.viewport.Height = contentHeight
+		m.SyntaxTA.SetWidth(msg.Width)
+		m.SyntaxTA.SetHeight(contentHeight)
+		m.Viewport.Width = msg.Width
+		m.Viewport.Height = contentHeight
 
-		termWidth = msg.Width
-		termHeight = msg.Height
+		TermWidth = msg.Width
+		TermHeight = msg.Height
 
 		return m, nil
 	}
 
 	// Update the appropriate component based on read-only state
 	readOnly := m.isCurrentBufferReadOnly()
-	if readOnly && m.err == nil {
-		m.viewport, cmd = m.viewport.Update(msg)
-	} else if !readOnly && m.err == nil {
-		m.syntaxTA, cmd = m.syntaxTA.Update(msg)
+	if readOnly && m.Err == nil {
+		m.Viewport, cmd = m.Viewport.Update(msg)
+	} else if !readOnly && m.Err == nil {
+		m.SyntaxTA, cmd = m.SyntaxTA.Update(msg)
 	}
 	return m, cmd
 }
 
 func (m Model) View() string {
 	// If showing filepicker, keep the old layout for now
-	if m.showPicker {
+	if m.ShowPicker {
 		return fmt.Sprintf("%s\n\n%s\n\n%s",
 			lipgloss.NewStyle().Bold(true).Render("macro - Select a file"),
-			m.filepicker.View(),
+			m.Filepicker.View(),
 			core.MessageStyle.Render("↑/↓: Navigate | Enter: Select | Ctrl-Q: Quit"))
 	}
 
 	// Content area - use viewport for read-only, syntaxTA for writable (with highlighting)
 	var contentView string
 	readOnly := m.isCurrentBufferReadOnly()
-	if readOnly && m.err == nil {
-		contentView = m.viewport.View()
+	if readOnly && m.Err == nil {
+		contentView = m.Viewport.View()
 	} else {
-		contentView = m.syntaxTA.View()
+		contentView = m.SyntaxTA.View()
 	}
 
 	// Build status bar with file info
@@ -235,14 +235,14 @@ func (m Model) View() string {
 
 	// Message line for warnings/errors/info
 	var messageLine string
-	if m.err != nil {
-		messageLine = core.ErrorStyle.Render(m.message)
-	} else if strings.Contains(m.message, "WARNING") || strings.Contains(m.message, "read-only") {
-		messageLine = core.WarningStyle.Render(m.message)
-	} else if m.message != defaultMessage {
-		messageLine = core.SuccessStyle.Render(m.message)
+	if m.Err != nil {
+		messageLine = core.ErrorStyle.Render(m.Message)
+	} else if strings.Contains(m.Message, "WARNING") || strings.Contains(m.Message, "read-only") {
+		messageLine = core.WarningStyle.Render(m.Message)
+	} else if m.Message != defaultMessage {
+		messageLine = core.SuccessStyle.Render(m.Message)
 	} else {
-		messageLine = core.MessageStyle.Render(m.message)
+		messageLine = core.MessageStyle.Render(m.Message)
 	}
 
 	baseView := fmt.Sprintf(
@@ -253,9 +253,9 @@ func (m Model) View() string {
 	)
 
 	// If showing dialog, overlay it on top of the base view
-	if m.activeDialog != nil && m.activeDialog.IsVisible() {
-		dialog := m.activeDialog.View(termWidth, termHeight)
-		return core.OverlayDialog(baseView, dialog, termWidth, termHeight)
+	if m.ActiveDialog != nil && m.ActiveDialog.IsVisible() {
+		dialog := m.ActiveDialog.View(TermWidth, TermHeight)
+		return core.OverlayDialog(baseView, dialog, TermWidth, TermHeight)
 	}
 
 	return baseView
