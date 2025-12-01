@@ -6,6 +6,8 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/shkschneider/macro/features"
+	// Import vanilla features to trigger their init() registration
 	vanilla "github.com/shkschneider/macro/features/vanilla"
 )
 
@@ -41,8 +43,8 @@ func main() {
 		globalReadOnlyMode = ReadWriteForced
 	}
 
-	// Register feature commands using auto-registration
-	vanilla.Register(func(cmd vanilla.CommandRegistration) {
+	// Register all feature commands using auto-registration from features registry
+	features.Register(func(cmd features.CommandRegistration) {
 		var execFunc func(*model) tea.Cmd
 
 		// Provide execute handlers for commands that need *model access

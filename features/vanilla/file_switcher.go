@@ -11,9 +11,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sahilm/fuzzy"
 	macro "github.com/shkschneider/macro/core"
+	"github.com/shkschneider/macro/features"
 )
 
 // ====== Command Registration ======
+
+// CmdFileOpen is the command name constant for file switcher
+const CmdFileOpen = "file-open"
 
 // FileSwitcherKeyBinding is the key binding for the file switcher command
 var FileSwitcherKeyBinding = key.NewBinding(
@@ -21,10 +25,20 @@ var FileSwitcherKeyBinding = key.NewBinding(
 	key.WithHelp("ctrl+p", "open file switcher"),
 )
 
+func init() {
+	features.RegisterCommand(features.CommandRegistration{
+		Name:           CmdFileOpen,
+		Key:            "Ctrl-P",
+		Description:    "Open file switcher",
+		KeyBinding:     FileSwitcherKeyBinding,
+		FeatureExecute: nil, // Main app provides execute handler
+	})
+}
+
 // FileSwitcherCommand returns the command definition for file switching
 func FileSwitcherCommand() macro.CommandDef {
 	return macro.CommandDef{
-		Name:        "file-open",
+		Name:        CmdFileOpen,
 		Key:         "Ctrl-P",
 		Description: "Open file switcher",
 		KeyBinding:  FileSwitcherKeyBinding,

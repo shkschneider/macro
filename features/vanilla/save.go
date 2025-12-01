@@ -7,7 +7,11 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	macro "github.com/shkschneider/macro/core"
+	"github.com/shkschneider/macro/features"
 )
+
+// CmdSave is the command name constant for save
+const CmdSave = "file-save"
 
 // SaveKeyBinding is the key binding for the save command
 var SaveKeyBinding = key.NewBinding(
@@ -15,10 +19,20 @@ var SaveKeyBinding = key.NewBinding(
 	key.WithHelp("ctrl+s", "save file"),
 )
 
+func init() {
+	features.RegisterCommand(features.CommandRegistration{
+		Name:           CmdSave,
+		Key:            "Ctrl-S",
+		Description:    "Save current buffer to disk",
+		KeyBinding:     SaveKeyBinding,
+		FeatureExecute: executeSave, // Feature provides execute handler
+	})
+}
+
 // SaveCommand returns the command definition for saving files with execution logic
 func SaveCommand() macro.FeatureCommand {
 	return macro.FeatureCommand{
-		Name:        "file-save",
+		Name:        CmdSave,
 		Key:         "Ctrl-S",
 		Description: "Save current buffer to disk",
 		KeyBinding:  SaveKeyBinding,

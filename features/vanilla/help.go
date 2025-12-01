@@ -9,9 +9,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sahilm/fuzzy"
 	macro "github.com/shkschneider/macro/core"
+	"github.com/shkschneider/macro/features"
 )
 
 // ====== Command Registration ======
+
+// CmdHelp is the command name constant for help/command palette
+const CmdHelp = "help-show"
 
 // HelpKeyBinding is the key binding for the command palette
 var HelpKeyBinding = key.NewBinding(
@@ -19,10 +23,20 @@ var HelpKeyBinding = key.NewBinding(
 	key.WithHelp("ctrl+space", "open command palette"),
 )
 
+func init() {
+	features.RegisterCommand(features.CommandRegistration{
+		Name:           CmdHelp,
+		Key:            "Ctrl-Space",
+		Description:    "Show command palette",
+		KeyBinding:     HelpKeyBinding,
+		FeatureExecute: nil, // Main app provides execute handler
+	})
+}
+
 // HelpCommand returns the command definition for showing help
 func HelpCommand() macro.CommandDef {
 	return macro.CommandDef{
-		Name:        "help-show",
+		Name:        CmdHelp,
 		Key:         "Ctrl-Space",
 		Description: "Show command palette",
 		KeyBinding:  HelpKeyBinding,

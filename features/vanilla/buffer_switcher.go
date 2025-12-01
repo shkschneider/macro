@@ -10,9 +10,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sahilm/fuzzy"
 	macro "github.com/shkschneider/macro/core"
+	"github.com/shkschneider/macro/features"
 )
 
 // ====== Command Registration ======
+
+// CmdBufferSwitch is the command name constant for buffer switcher
+const CmdBufferSwitch = "buffer-switch"
 
 // BufferSwitcherKeyBinding is the key binding for the buffer switcher command
 var BufferSwitcherKeyBinding = key.NewBinding(
@@ -20,10 +24,20 @@ var BufferSwitcherKeyBinding = key.NewBinding(
 	key.WithHelp("ctrl+b", "switch buffer"),
 )
 
+func init() {
+	features.RegisterCommand(features.CommandRegistration{
+		Name:           CmdBufferSwitch,
+		Key:            "Ctrl-B",
+		Description:    "Open buffer switcher dialog",
+		KeyBinding:     BufferSwitcherKeyBinding,
+		FeatureExecute: nil, // Main app provides execute handler
+	})
+}
+
 // BufferSwitcherCommand returns the command definition for buffer switching
 func BufferSwitcherCommand() macro.CommandDef {
 	return macro.CommandDef{
-		Name:        "buffer-switch",
+		Name:        CmdBufferSwitch,
 		Key:         "Ctrl-B",
 		Description: "Open buffer switcher dialog",
 		KeyBinding:  BufferSwitcherKeyBinding,
