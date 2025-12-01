@@ -10,11 +10,10 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/dustin/go-humanize"
 	"github.com/shkschneider/macro/api"
-	"github.com/shkschneider/macro/core"
 )
 
 type Model struct {
-	SyntaxTA      *core.SyntaxTextarea
+	SyntaxTA      *SyntaxTextarea
 	Viewport      viewport.Model
 	Filepicker    filepicker.Model
 	Buffers       []Buffer // All open buffers
@@ -23,11 +22,11 @@ type Model struct {
 	Err           error
 	ShowPicker    bool
 	ActiveDialog  api.Dialog        // Single active dialog (nil when closed)
-	CursorState   *core.CursorState // Persistent cursor position storage
+	CursorState   *CursorState // Persistent cursor position storage
 }
 
 func InitialModel(filePath string) Model {
-	sta := core.NewSyntaxTextarea()
+	sta := NewSyntaxTextarea()
 	sta.Focus()
 
 	fp := filepicker.New()
@@ -46,7 +45,7 @@ func InitialModel(filePath string) Model {
 		Err:           nil,
 		ShowPicker:    false,
 		ActiveDialog:  nil,
-		CursorState:   core.NewCursorState(),
+		CursorState:   NewCursorState(),
 	}
 
 	if filePath != "" {
@@ -97,12 +96,12 @@ func InitialModel(filePath string) Model {
 func (m *Model) BuildStatusBar() string {
 	buf := m.getCurrentBuffer()
 	if buf == nil {
-		return core.StatusBarStyle.Width(TermWidth).Render("New File")
+		return StatusBarStyle.Width(TermWidth).Render("New File")
 	}
 
 	// Get file info
 	fileName := filepath.Base(buf.FilePath)
-	lang := core.DetectLanguage(buf.FilePath)
+	lang := DetectLanguage(buf.FilePath)
 	dirPath := filepath.Dir(buf.FilePath)
 	modified := m.isCurrentBufferModified()
 	readOnly := buf.ReadOnly
@@ -158,5 +157,5 @@ func (m *Model) BuildStatusBar() string {
 	}
 
 	fullStatusContent := leftSection + strings.Repeat(" ", spacesNeeded) + rightSection
-	return core.StatusBarStyle.Width(TermWidth).Render(fullStatusContent)
+	return StatusBarStyle.Width(TermWidth).Render(fullStatusContent)
 }

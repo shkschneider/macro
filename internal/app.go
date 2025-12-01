@@ -8,7 +8,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/shkschneider/macro/core"
 	"github.com/shkschneider/macro/plugins/vanilla"
 )
 
@@ -218,7 +217,7 @@ func (m Model) View() string {
 		return fmt.Sprintf("%s\n\n%s\n\n%s",
 			lipgloss.NewStyle().Bold(true).Render("macro - Select a file"),
 			m.Filepicker.View(),
-			core.MessageStyle.Render("↑/↓: Navigate | Enter: Select | Ctrl-Q: Quit"))
+			MessageStyle.Render("↑/↓: Navigate | Enter: Select | Ctrl-Q: Quit"))
 	}
 
 	// Content area - use viewport for read-only, syntaxTA for writable (with highlighting)
@@ -236,13 +235,13 @@ func (m Model) View() string {
 	// Message line for warnings/errors/info
 	var messageLine string
 	if m.Err != nil {
-		messageLine = core.ErrorStyle.Render(m.Message)
+		messageLine = ErrorStyle.Render(m.Message)
 	} else if strings.Contains(m.Message, "WARNING") || strings.Contains(m.Message, "read-only") {
-		messageLine = core.WarningStyle.Render(m.Message)
+		messageLine = WarningStyle.Render(m.Message)
 	} else if m.Message != defaultMessage {
-		messageLine = core.SuccessStyle.Render(m.Message)
+		messageLine = SuccessStyle.Render(m.Message)
 	} else {
-		messageLine = core.MessageStyle.Render(m.Message)
+		messageLine = MessageStyle.Render(m.Message)
 	}
 
 	baseView := fmt.Sprintf(
@@ -255,7 +254,7 @@ func (m Model) View() string {
 	// If showing dialog, overlay it on top of the base view
 	if m.ActiveDialog != nil && m.ActiveDialog.IsVisible() {
 		dialog := m.ActiveDialog.View(TermWidth, TermHeight)
-		return core.OverlayDialog(baseView, dialog, TermWidth, TermHeight)
+		return OverlayDialog(baseView, dialog, TermWidth, TermHeight)
 	}
 
 	return baseView
