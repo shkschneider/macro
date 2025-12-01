@@ -45,18 +45,3 @@ func ExecuteBufferSwitcher(m *Model) tea.Cmd {
 	m.Message = "No buffers open"
 	return nil
 }
-
-// executeCommandPalette opens the command palette dialog
-func ExecuteCommandPalette(m *Model) tea.Cmd {
-	// Get all commands
-	var commands []api.CommandDef
-	for _, cmd := range GetKeybindings() {
-		commands = append(commands, api.CommandDef{
-			Name:        cmd.Name,
-			Key:         cmd.Key,
-			Description: cmd.Description,
-		})
-	}
-	m.ActiveDialog = vanilla.NewHelpDialog(commands)
-	return m.ActiveDialog.Init()
-}
