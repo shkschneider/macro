@@ -47,19 +47,19 @@ func main() {
 
 		// Provide execute handlers for commands that need *model access
 		switch cmd.Name {
-		case "quit":
+		case feature.CmdQuit:
 			execFunc = executeQuit
-		case "help-show":
+		case feature.CmdHelp:
 			execFunc = executeCommandPalette
-		case "file-open":
+		case feature.CmdFileOpen:
 			execFunc = executeFileSwitcher
-		case "buffer-switch":
+		case feature.CmdBufferSwitch:
 			execFunc = executeBufferSwitcher
 		default:
 			// For commands with EditorContext execute (like save)
-			if cmd.Execute != nil {
+			if cmd.FeatureExecute != nil {
 				execFunc = func(m *model) tea.Cmd {
-					return cmd.Execute(m)
+					return cmd.FeatureExecute(m)
 				}
 			}
 		}
