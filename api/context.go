@@ -40,4 +40,9 @@ type EditorContext interface {
 
 	// Command operations
 	ExecuteCommand(name string) tea.Cmd
+
+	// Multi-cursor operations
+	AddCursorAtNextOccurrence() bool
+	ClearSecondaryCursors()
+	HasSecondaryCursors() bool
 }

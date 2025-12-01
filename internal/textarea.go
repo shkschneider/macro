@@ -2,12 +2,20 @@
 package internal
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
+
+// SecondaryCursor represents an additional cursor position for multi-cursor editing.
+// Line and Column are 0-indexed.
+type SecondaryCursor struct {
+	Line   int
+	Column int
+}
 
 // Textarea wraps a textarea with syntax highlighting overlay.
 // The textarea handles all input, while a highlighted version is displayed.
@@ -25,6 +33,13 @@ type Textarea struct {
 
 	// Diff tracking for showing changes
 	diffTracker *DiffTracker
+
+	// Secondary cursors for multi-cursor editing
+	// The primary cursor is managed by textarea.Model
+	secondaryCursors []SecondaryCursor
+
+	// Style for secondary cursors (slightly different from primary)
+	secondaryCursorStyle lipgloss.Style
 }
 
 // NewTextarea creates a new syntax-highlighted textarea.
@@ -46,7 +61,9 @@ func NewTextarea() *Textarea {
 			Foreground(lipgloss.Color("241")),
 		cursorLineStyle: lipgloss.NewStyle().
 			Background(lipgloss.Color("236")),
-		diffTracker: NewDiffTracker(),
+		diffTracker:          NewDiffTracker(),
+		secondaryCursors:     []SecondaryCursor{},
+		secondaryCursorStyle: lipgloss.NewStyle().Background(lipgloss.Color("240")),
 	}
 }
 
@@ -176,8 +193,487 @@ func (s *Textarea) SetCursorPosition(line, column int) {
 	}
 }
 
+// ===== Multi-Cursor Methods =====
+
+// AddSecondaryCursor adds a secondary cursor at the specified position (0-indexed).
+// If a cursor already exists at this position, it is not added again.
+func (s *Textarea) AddSecondaryCursor(line, column int) {
+	// Don't add duplicate cursors
+	for _, c := range s.secondaryCursors {
+		if c.Line == line && c.Column == column {
+			return
+		}
+	}
+	// Don't add cursor at primary cursor position
+	if line == s.textarea.Line() && column == s.textarea.LineInfo().ColumnOffset {
+		return
+	}
+	s.secondaryCursors = append(s.secondaryCursors, SecondaryCursor{Line: line, Column: column})
+	s.sortCursors()
+}
+
+// ClearSecondaryCursors removes all secondary cursors.
+func (s *Textarea) ClearSecondaryCursors() {
+	s.secondaryCursors = []SecondaryCursor{}
+}
+
+// HasSecondaryCursors returns true if there are any secondary cursors.
+func (s *Textarea) HasSecondaryCursors() bool {
+	return len(s.secondaryCursors) > 0
+}
+
+// SecondaryCursorCount returns the number of secondary cursors.
+func (s *Textarea) SecondaryCursorCount() int {
+	return len(s.secondaryCursors)
+}
+
+// GetAllCursorPositions returns all cursor positions (primary first, then secondary).
+// All positions are 0-indexed.
+func (s *Textarea) GetAllCursorPositions() []SecondaryCursor {
+	result := []SecondaryCursor{{
+		Line:   s.textarea.Line(),
+		Column: s.textarea.LineInfo().ColumnOffset,
+	}}
+	result = append(result, s.secondaryCursors...)
+	return result
+}
+
+// sortCursors sorts secondary cursors by line then column.
+func (s *Textarea) sortCursors() {
+	sort.Slice(s.secondaryCursors, func(i, j int) bool {
+		if s.secondaryCursors[i].Line != s.secondaryCursors[j].Line {
+			return s.secondaryCursors[i].Line < s.secondaryCursors[j].Line
+		}
+		return s.secondaryCursors[i].Column < s.secondaryCursors[j].Column
+	})
+}
+
+// insertTextAtAllCursors inserts text at all cursor positions (primary and secondary).
+// Cursors are processed from bottom-right to top-left to avoid position shifts affecting later insertions.
+func (s *Textarea) insertTextAtAllCursors(text string) {
+	// Get all cursors and sort them from bottom-right to top-left
+	allCursors := s.GetAllCursorPositions()
+	sort.Slice(allCursors, func(i, j int) bool {
+		if allCursors[i].Line != allCursors[j].Line {
+			return allCursors[i].Line > allCursors[j].Line
+		}
+		return allCursors[i].Column > allCursors[j].Column
+	})
+
+	content := s.textarea.Value()
+	lines := strings.Split(content, "\n")
+
+	// Process insertions from bottom-right to top-left
+	for _, cursor := range allCursors {
+		lines = s.insertTextAtPosition(lines, cursor.Line, cursor.Column, text)
+	}
+
+	// Update the content
+	newContent := strings.Join(lines, "\n")
+	s.textarea.SetValue(newContent)
+
+	// Update cursor positions - all cursors move right by len(text) or handle newlines
+	textRunes := []rune(text)
+	textLen := len(textRunes)
+	hasNewline := strings.Contains(text, "\n")
+
+	// Update primary cursor position
+	primaryLine := s.textarea.Line()
+	primaryCol := s.textarea.LineInfo().ColumnOffset
+
+	// For single-line insert, primary cursor just moves right
+	// For multi-line insert, it moves to the new line position
+	if hasNewline {
+		newlineCount := strings.Count(text, "\n")
+		lastNewlineIdx := strings.LastIndex(text, "\n")
+		afterLastNewline := text[lastNewlineIdx+1:]
+		s.SetCursorPosition(primaryLine+newlineCount, len([]rune(afterLastNewline)))
+	} else {
+		s.SetCursorPosition(primaryLine, primaryCol+textLen)
+	}
+
+	// Update secondary cursor positions
+	for i := range s.secondaryCursors {
+		if hasNewline {
+			newlineCount := strings.Count(text, "\n")
+			lastNewlineIdx := strings.LastIndex(text, "\n")
+			afterLastNewline := text[lastNewlineIdx+1:]
+			s.secondaryCursors[i].Line += newlineCount
+			s.secondaryCursors[i].Column = len([]rune(afterLastNewline))
+		} else {
+			s.secondaryCursors[i].Column += textLen
+		}
+	}
+}
+
+// insertTextAtPosition inserts text at a specific line and column position.
+func (s *Textarea) insertTextAtPosition(lines []string, line, col int, text string) []string {
+	if line < 0 || line >= len(lines) {
+		return lines
+	}
+
+	lineContent := lines[line]
+	runes := []rune(lineContent)
+
+	// Clamp column to valid range
+	if col < 0 {
+		col = 0
+	}
+	if col > len(runes) {
+		col = len(runes)
+	}
+
+	before := string(runes[:col])
+	after := string(runes[col:])
+
+	// Handle text with newlines
+	if strings.Contains(text, "\n") {
+		parts := strings.Split(text, "\n")
+		newLines := make([]string, 0, len(lines)+len(parts)-1)
+
+		// Add lines before the insertion point
+		newLines = append(newLines, lines[:line]...)
+
+		// Add the first part combined with content before cursor
+		newLines = append(newLines, before+parts[0])
+
+		// Add middle parts (if any)
+		for i := 1; i < len(parts)-1; i++ {
+			newLines = append(newLines, parts[i])
+		}
+
+		// Add the last part combined with content after cursor
+		newLines = append(newLines, parts[len(parts)-1]+after)
+
+		// Add lines after the original line
+		newLines = append(newLines, lines[line+1:]...)
+
+		return newLines
+	}
+
+	// Simple insertion without newlines
+	lines[line] = before + text + after
+	return lines
+}
+
+// deleteAtAllCursors deletes characters at all cursor positions.
+// If forward is true, deletes character after cursor (Delete key).
+// If forward is false, deletes character before cursor (Backspace key).
+func (s *Textarea) deleteAtAllCursors(forward bool) {
+	// Get all cursors and sort them from bottom-right to top-left
+	allCursors := s.GetAllCursorPositions()
+	sort.Slice(allCursors, func(i, j int) bool {
+		if allCursors[i].Line != allCursors[j].Line {
+			return allCursors[i].Line > allCursors[j].Line
+		}
+		return allCursors[i].Column > allCursors[j].Column
+	})
+
+	content := s.textarea.Value()
+	lines := strings.Split(content, "\n")
+
+	// Track which deletions caused line merges
+	var lineDeltas []struct {
+		line       int
+		lineMerged bool
+	}
+
+	// Process deletions from bottom-right to top-left
+	for _, cursor := range allCursors {
+		var lineMerged bool
+		lines, lineMerged = s.deleteAtPosition(lines, cursor.Line, cursor.Column, forward)
+		lineDeltas = append(lineDeltas, struct {
+			line       int
+			lineMerged bool
+		}{cursor.Line, lineMerged})
+	}
+
+	// Update the content
+	newContent := strings.Join(lines, "\n")
+	s.textarea.SetValue(newContent)
+
+	// Update cursor positions
+	primaryLine := s.textarea.Line()
+	primaryCol := s.textarea.LineInfo().ColumnOffset
+
+	// For backspace, primary cursor moves left by 1 (or up if at start of line)
+	if !forward {
+		if primaryCol > 0 {
+			s.SetCursorPosition(primaryLine, primaryCol-1)
+		} else if primaryLine > 0 {
+			// Move to end of previous line
+			prevLineLen := len([]rune(lines[primaryLine-1]))
+			s.SetCursorPosition(primaryLine-1, prevLineLen)
+		}
+	}
+	// For delete, cursor doesn't move
+
+	// Update secondary cursor positions
+	for i := range s.secondaryCursors {
+		if !forward {
+			if s.secondaryCursors[i].Column > 0 {
+				s.secondaryCursors[i].Column--
+			} else if s.secondaryCursors[i].Line > 0 {
+				// Line merge happened, cursor moves to end of previous line
+				s.secondaryCursors[i].Line--
+				if s.secondaryCursors[i].Line < len(lines) {
+					s.secondaryCursors[i].Column = len([]rune(lines[s.secondaryCursors[i].Line]))
+				}
+			}
+		}
+	}
+
+	// Remove duplicate cursors that might have ended up at the same position
+	s.removeDuplicateCursors()
+}
+
+// deleteAtPosition deletes a character at a specific position.
+// Returns the modified lines and whether a line merge occurred.
+func (s *Textarea) deleteAtPosition(lines []string, line, col int, forward bool) ([]string, bool) {
+	if line < 0 || line >= len(lines) {
+		return lines, false
+	}
+
+	lineContent := lines[line]
+	runes := []rune(lineContent)
+
+	if forward {
+		// Delete key - delete character at cursor position
+		if col < len(runes) {
+			// Delete character in current line
+			lines[line] = string(runes[:col]) + string(runes[col+1:])
+			return lines, false
+		} else if line < len(lines)-1 {
+			// At end of line, merge with next line
+			lines[line] = lineContent + lines[line+1]
+			lines = append(lines[:line+1], lines[line+2:]...)
+			return lines, true
+		}
+	} else {
+		// Backspace - delete character before cursor position
+		if col > 0 {
+			// Delete character before cursor
+			lines[line] = string(runes[:col-1]) + string(runes[col:])
+			return lines, false
+		} else if line > 0 {
+			// At start of line, merge with previous line
+			prevLine := lines[line-1]
+			lines[line-1] = prevLine + lineContent
+			lines = append(lines[:line], lines[line+1:]...)
+			return lines, true
+		}
+	}
+
+	return lines, false
+}
+
+// removeDuplicateCursors removes secondary cursors that are at the same position as primary or other secondary cursors.
+func (s *Textarea) removeDuplicateCursors() {
+	primaryLine := s.textarea.Line()
+	primaryCol := s.textarea.LineInfo().ColumnOffset
+
+	seen := make(map[string]bool)
+	// Mark primary cursor position as seen
+	seen[cursorKey(primaryLine, primaryCol)] = true
+
+	var filtered []SecondaryCursor
+	for _, c := range s.secondaryCursors {
+		key := cursorKey(c.Line, c.Column)
+		if !seen[key] {
+			seen[key] = true
+			filtered = append(filtered, c)
+		}
+	}
+	s.secondaryCursors = filtered
+}
+
+// cursorKey creates a unique key for a cursor position.
+func cursorKey(line, col int) string {
+	return intToStr(line) + ":" + intToStr(col)
+}
+
+// AddCursorAtNextOccurrence finds the next occurrence of the word under/near the cursor
+// and adds a secondary cursor there. Returns true if a new cursor was added.
+func (s *Textarea) AddCursorAtNextOccurrence() bool {
+	content := s.textarea.Value()
+	lines := strings.Split(content, "\n")
+	
+	// Get current cursor position
+	curLine := s.textarea.Line()
+	curCol := s.textarea.LineInfo().ColumnOffset
+	
+	// Get the word at cursor position
+	word := s.getWordAtPosition(lines, curLine, curCol)
+	if word == "" {
+		return false
+	}
+	
+	// Find all positions of all cursors (primary + secondary)
+	allCursors := s.GetAllCursorPositions()
+	
+	// Find all occurrences of the word
+	occurrences := s.findWordOccurrences(lines, word)
+	if len(occurrences) == 0 {
+		return false
+	}
+	
+	// Find the next occurrence after the last cursor
+	lastCursor := allCursors[len(allCursors)-1]
+	for _, occ := range occurrences {
+		// Skip if this occurrence is before or at the last cursor
+		if occ.Line < lastCursor.Line || (occ.Line == lastCursor.Line && occ.Column <= lastCursor.Column) {
+			continue
+		}
+		// Skip if a cursor already exists at this position
+		cursorExists := false
+		for _, c := range allCursors {
+			if c.Line == occ.Line && c.Column == occ.Column {
+				cursorExists = true
+				break
+			}
+		}
+		if !cursorExists {
+			s.AddSecondaryCursor(occ.Line, occ.Column)
+			return true
+		}
+	}
+	
+	// Wrap around to the beginning if no occurrence found after last cursor
+	for _, occ := range occurrences {
+		// Skip if a cursor already exists at this position
+		cursorExists := false
+		for _, c := range allCursors {
+			if c.Line == occ.Line && c.Column == occ.Column {
+				cursorExists = true
+				break
+			}
+		}
+		if !cursorExists {
+			s.AddSecondaryCursor(occ.Line, occ.Column)
+			return true
+		}
+	}
+	
+	return false
+}
+
+// getWordAtPosition extracts the word at the given position.
+func (s *Textarea) getWordAtPosition(lines []string, line, col int) string {
+	if line < 0 || line >= len(lines) {
+		return ""
+	}
+	lineContent := lines[line]
+	runes := []rune(lineContent)
+	
+	if col < 0 || col > len(runes) {
+		return ""
+	}
+	
+	// Find word boundaries
+	start := col
+	end := col
+	
+	// Move start backward to find word beginning
+	for start > 0 && isWordChar(runes[start-1]) {
+		start--
+	}
+	
+	// Move end forward to find word end
+	for end < len(runes) && isWordChar(runes[end]) {
+		end++
+	}
+	
+	if start == end {
+		return ""
+	}
+	
+	return string(runes[start:end])
+}
+
+// findWordOccurrences finds all occurrences of a word in the content.
+// Returns positions as line/column (0-indexed).
+func (s *Textarea) findWordOccurrences(lines []string, word string) []SecondaryCursor {
+	var occurrences []SecondaryCursor
+	
+	for lineIdx, lineContent := range lines {
+		runes := []rune(lineContent)
+		wordRunes := []rune(word)
+		
+		for col := 0; col <= len(runes)-len(wordRunes); col++ {
+			// Check if word matches at this position
+			match := true
+			for i, wr := range wordRunes {
+				if runes[col+i] != wr {
+					match = false
+					break
+				}
+			}
+			if !match {
+				continue
+			}
+			
+			// Check word boundaries - make sure it's a complete word
+			if col > 0 && isWordChar(runes[col-1]) {
+				continue
+			}
+			if col+len(wordRunes) < len(runes) && isWordChar(runes[col+len(wordRunes)]) {
+				continue
+			}
+			
+			occurrences = append(occurrences, SecondaryCursor{Line: lineIdx, Column: col})
+		}
+	}
+	
+	return occurrences
+}
+
+// isWordChar returns true if the rune is a word character (alphanumeric or underscore).
+func isWordChar(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_'
+}
+
 // Update handles messages and updates the textarea state.
+// When there are secondary cursors, text operations are applied to all cursor positions.
 func (s *Textarea) Update(msg tea.Msg) (*Textarea, tea.Cmd) {
+	// If no secondary cursors, just pass through to textarea
+	if len(s.secondaryCursors) == 0 {
+		var cmd tea.Cmd
+		s.textarea, cmd = s.textarea.Update(msg)
+		return s, cmd
+	}
+
+	// Handle key messages specially for multi-cursor editing
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		// Handle special keys that need multi-cursor processing
+		switch keyMsg.Type {
+		case tea.KeyRunes:
+			// Insert characters at all cursor positions
+			s.insertTextAtAllCursors(string(keyMsg.Runes))
+			return s, nil
+
+		case tea.KeySpace:
+			s.insertTextAtAllCursors(" ")
+			return s, nil
+
+		case tea.KeyTab:
+			s.insertTextAtAllCursors("\t")
+			return s, nil
+
+		case tea.KeyEnter:
+			s.insertTextAtAllCursors("\n")
+			return s, nil
+
+		case tea.KeyBackspace:
+			s.deleteAtAllCursors(false)
+			return s, nil
+
+		case tea.KeyDelete:
+			s.deleteAtAllCursors(true)
+			return s, nil
+		}
+	}
+
+	// For other messages (like window resize), pass through normally
 	var cmd tea.Cmd
 	s.textarea, cmd = s.textarea.Update(msg)
 	return s, cmd
@@ -249,9 +745,24 @@ func (s *Textarea) View() string {
 			lineContent = ""
 		}
 
-		// If this is the cursor line, show the cursor
+		// Collect all cursor columns on this line
+		var cursorCols []int
+		var isPrimary []bool // Track which cursors are primary
 		if i == cursorLine && s.textarea.Focused() {
-			lineContent = s.insertCursor(lines[i], highlightedLines[i], cursorCol)
+			cursorCols = append(cursorCols, cursorCol)
+			isPrimary = append(isPrimary, true)
+		}
+		// Add secondary cursors on this line
+		for _, sc := range s.secondaryCursors {
+			if sc.Line == i && s.textarea.Focused() {
+				cursorCols = append(cursorCols, sc.Column)
+				isPrimary = append(isPrimary, false)
+			}
+		}
+
+		// Insert all cursors into the line content
+		if len(cursorCols) > 0 {
+			lineContent = s.insertMultipleCursors(lines[i], highlightedLines[i], cursorCols, isPrimary)
 		}
 
 		result.WriteString(lineNum)
@@ -362,6 +873,131 @@ func (s *Textarea) insertCursor(plainLine, highlightedLine string, col int) stri
 	// Use \x1b[7m to turn ON reverse video, \x1b[27m to turn it OFF
 	// This preserves any foreground/background colors that were set
 	return before + "\x1b[7m" + cursorChar + "\x1b[27m" + after
+}
+
+// insertMultipleCursors inserts multiple visible cursors at the specified column positions.
+// Primary cursor uses reverse video, secondary cursors use underline.
+func (s *Textarea) insertMultipleCursors(plainLine, highlightedLine string, cols []int, isPrimary []bool) string {
+	if len(cols) == 0 {
+		return highlightedLine
+	}
+
+	plainRunes := []rune(plainLine)
+	highlightedRunes := []rune(highlightedLine)
+
+	// Build a map of visible column to cursor info
+	type cursorInfo struct {
+		isPrimary bool
+	}
+	cursorMap := make(map[int]cursorInfo)
+	for i, col := range cols {
+		cursorMap[col] = cursorInfo{isPrimary: isPrimary[i]}
+	}
+
+	// Map visible column positions to their rune positions in highlighted line
+	type runePos struct {
+		start     int
+		end       int
+		isPrimary bool
+	}
+	var cursorPositions []runePos
+
+	visibleCol := 0
+	inEscape := false
+	for i := 0; i < len(highlightedRunes); i++ {
+		r := highlightedRunes[i]
+
+		// Track ANSI escape sequences
+		if r == '\x1b' {
+			inEscape = true
+			continue
+		}
+		if inEscape {
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+				inEscape = false
+			}
+			continue
+		}
+
+		// This is a visible character - check if cursor is here
+		if info, exists := cursorMap[visibleCol]; exists {
+			cursorPositions = append(cursorPositions, runePos{
+				start:     i,
+				end:       i + 1,
+				isPrimary: info.isPrimary,
+			})
+		}
+		visibleCol++
+	}
+
+	// Handle cursors at end of line (beyond visible content)
+	for col, info := range cursorMap {
+		if col >= len(plainRunes) {
+			// This cursor is at end of line - mark it with a special position
+			cursorPositions = append(cursorPositions, runePos{
+				start:     -1, // Special marker for end of line
+				end:       -1,
+				isPrimary: info.isPrimary,
+			})
+		}
+	}
+
+	// If no cursor positions found in line content, just handle end-of-line cursors
+	if len(cursorPositions) == 0 {
+		// Add cursors at end of line
+		var endCursors string
+		for _, info := range cursorMap {
+			if info.isPrimary {
+				endCursors += "\x1b[7m \x1b[27m"
+			} else {
+				endCursors += "\x1b[4m \x1b[24m"
+			}
+		}
+		return highlightedLine + endCursors
+	}
+
+	// Sort cursor positions by start position (descending) so we can insert from right to left
+	sort.Slice(cursorPositions, func(i, j int) bool {
+		return cursorPositions[i].start > cursorPositions[j].start
+	})
+
+	// Build result by inserting cursor codes from right to left
+	result := highlightedRunes
+	var endOfLineCursors []runePos
+	for _, pos := range cursorPositions {
+		if pos.start == -1 {
+			endOfLineCursors = append(endOfLineCursors, pos)
+			continue
+		}
+
+		// Insert cursor styling
+		var cursorStart, cursorEnd string
+		if pos.isPrimary {
+			cursorStart = "\x1b[7m"  // Reverse video ON
+			cursorEnd = "\x1b[27m"   // Reverse video OFF
+		} else {
+			cursorStart = "\x1b[4m"  // Underline ON
+			cursorEnd = "\x1b[24m"   // Underline OFF
+		}
+
+		// Insert cursor codes around the character
+		before := string(result[:pos.start])
+		char := string(result[pos.start:pos.end])
+		after := string(result[pos.end:])
+		result = []rune(before + cursorStart + char + cursorEnd + after)
+	}
+
+	// Add end-of-line cursors
+	resultStr := string(result)
+	for _, pos := range endOfLineCursors {
+		if pos.isPrimary {
+			resultStr += "\x1b[7m \x1b[27m"
+		} else {
+			resultStr += "\x1b[4m \x1b[24m"
+		}
+	}
+
+	return resultStr
 }
 
 // intToStr converts an integer to string.

@@ -322,3 +322,20 @@ func (m *Model) CloseCurrentBuffer() bool {
 	m.loadBuffer(m.CurrentBuffer)
 	return false
 }
+
+// ===== Multi-Cursor EditorContext implementation =====
+
+// AddCursorAtNextOccurrence implements api.EditorContext
+func (m *Model) AddCursorAtNextOccurrence() bool {
+	return m.Textarea.AddCursorAtNextOccurrence()
+}
+
+// ClearSecondaryCursors implements api.EditorContext
+func (m *Model) ClearSecondaryCursors() {
+	m.Textarea.ClearSecondaryCursors()
+}
+
+// HasSecondaryCursors implements api.EditorContext
+func (m *Model) HasSecondaryCursors() bool {
+	return m.Textarea.HasSecondaryCursors()
+}

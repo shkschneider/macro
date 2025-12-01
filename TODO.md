@@ -11,6 +11,6 @@
 [ ] configuration
 [ ] selection (shift + mouse)
 [ ] (auto)indentation
-[ ] multiple cursors
+[x] multiple cursors
 [ ] navigation (ctags)
 [x] explorer
