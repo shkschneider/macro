@@ -3,6 +3,7 @@ package internal
 
 import (
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textarea"
@@ -372,20 +373,16 @@ func (s *Textarea) deleteAtAllCursors(forward bool) {
 	content := s.textarea.Value()
 	lines := strings.Split(content, "\n")
 
-	// Track which deletions caused line merges
-	var lineDeltas []struct {
-		line       int
-		lineMerged bool
-	}
+	// Count line merges to adjust cursor line positions
+	lineMergeCount := 0
 
 	// Process deletions from bottom-right to top-left
 	for _, cursor := range allCursors {
 		var lineMerged bool
-		lines, lineMerged = s.deleteAtPosition(lines, cursor.Line, cursor.Column, forward)
-		lineDeltas = append(lineDeltas, struct {
-			line       int
-			lineMerged bool
-		}{cursor.Line, lineMerged})
+		lines, lineMerged = s.deleteAtPosition(lines, cursor.Line-lineMergeCount, cursor.Column, forward)
+		if lineMerged {
+			lineMergeCount++
+		}
 	}
 
 	// Update the content
@@ -489,7 +486,7 @@ func (s *Textarea) removeDuplicateCursors() {
 
 // cursorKey creates a unique key for a cursor position.
 func cursorKey(line, col int) string {
-	return intToStr(line) + ":" + intToStr(col)
+	return strconv.Itoa(line) + ":" + strconv.Itoa(col)
 }
 
 // AddCursorAtNextOccurrence finds the next occurrence of the word under/near the cursor
@@ -1000,17 +997,9 @@ func (s *Textarea) insertMultipleCursors(plainLine, highlightedLine string, cols
 	return resultStr
 }
 
-// intToStr converts an integer to string.
+// intToStr converts an integer to string using the standard library.
 func intToStr(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	result := ""
-	for n > 0 {
-		result = string(rune('0'+n%10)) + result
-		n /= 10
-	}
-	return result
+	return strconv.Itoa(n)
 }
 
 // GetLanguage returns the detected or set language.
