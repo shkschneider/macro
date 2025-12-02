@@ -9,9 +9,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// SyntaxTextarea wraps a textarea with syntax highlighting overlay.
+// Textarea wraps a textarea with syntax highlighting overlay.
 // The textarea handles all input, while a highlighted version is displayed.
-type SyntaxTextarea struct {
+type Textarea struct {
 	textarea textarea.Model
 	filename string
 	language string
@@ -27,8 +27,8 @@ type SyntaxTextarea struct {
 	diffTracker *DiffTracker
 }
 
-// NewSyntaxTextarea creates a new syntax-highlighted textarea.
-func NewSyntaxTextarea() *SyntaxTextarea {
+// NewTextarea creates a new syntax-highlighted textarea.
+func NewTextarea() *Textarea {
 	ta := textarea.New()
 	ta.Focus()
 	ta.Prompt = ""
@@ -40,7 +40,7 @@ func NewSyntaxTextarea() *SyntaxTextarea {
 	ta.BlurredStyle.Base = lipgloss.NewStyle()
 	ta.BlurredStyle.Text = lipgloss.NewStyle()
 
-	return &SyntaxTextarea{
+	return &Textarea{
 		textarea: ta,
 		lineNumberStyle: lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241")),
@@ -51,7 +51,7 @@ func NewSyntaxTextarea() *SyntaxTextarea {
 }
 
 // SetFilename sets the filename for language detection and diff tracking.
-func (s *SyntaxTextarea) SetFilename(filename string) {
+func (s *Textarea) SetFilename(filename string) {
 	s.filename = filename
 	s.language = DetectLanguage(filename)
 	// Also set file path for git diff tracking
@@ -61,96 +61,96 @@ func (s *SyntaxTextarea) SetFilename(filename string) {
 // SetOriginalContent stores the original file content for diff tracking.
 // Call this when loading a file to enable change indicators.
 // Note: This is now a no-op since we use git diff directly with the file path.
-func (s *SyntaxTextarea) SetOriginalContent(content string) {
+func (s *Textarea) SetOriginalContent(content string) {
 	s.diffTracker.SetOriginal(content)
 }
 
 // ClearOriginalContent clears the original content (e.g., for new files).
-func (s *SyntaxTextarea) ClearOriginalContent() {
+func (s *Textarea) ClearOriginalContent() {
 	s.diffTracker.ClearOriginal()
 }
 
 // SetLanguage explicitly sets the language for highlighting.
-func (s *SyntaxTextarea) SetLanguage(language string) {
+func (s *Textarea) SetLanguage(language string) {
 	s.language = language
 }
 
 // SetValue sets the textarea content.
-func (s *SyntaxTextarea) SetValue(value string) {
+func (s *Textarea) SetValue(value string) {
 	s.textarea.SetValue(value)
 }
 
 // Value returns the current content.
-func (s *SyntaxTextarea) Value() string {
+func (s *Textarea) Value() string {
 	return s.textarea.Value()
 }
 
 // SetWidth sets the width.
-func (s *SyntaxTextarea) SetWidth(w int) {
+func (s *Textarea) SetWidth(w int) {
 	s.width = w
 	// Account for line numbers (4 chars) + diff indicator (1 char) + space (1 char) = 6 chars
 	s.textarea.SetWidth(w - 6)
 }
 
 // SetHeight sets the height.
-func (s *SyntaxTextarea) SetHeight(h int) {
+func (s *Textarea) SetHeight(h int) {
 	s.height = h
 	s.textarea.SetHeight(h)
 }
 
 // Focus focuses the textarea.
-func (s *SyntaxTextarea) Focus() tea.Cmd {
+func (s *Textarea) Focus() tea.Cmd {
 	return s.textarea.Focus()
 }
 
 // Blur blurs the textarea.
-func (s *SyntaxTextarea) Blur() {
+func (s *Textarea) Blur() {
 	s.textarea.Blur()
 }
 
 // Focused returns whether the textarea is focused.
-func (s *SyntaxTextarea) Focused() bool {
+func (s *Textarea) Focused() bool {
 	return s.textarea.Focused()
 }
 
 // CursorStart moves cursor to start of current line.
-func (s *SyntaxTextarea) CursorStart() {
+func (s *Textarea) CursorStart() {
 	s.textarea.CursorStart()
 }
 
 // CursorUp moves cursor up one line.
-func (s *SyntaxTextarea) CursorUp() {
+func (s *Textarea) CursorUp() {
 	s.textarea.CursorUp()
 }
 
 // Line returns the current line number (0-indexed).
-func (s *SyntaxTextarea) Line() int {
+func (s *Textarea) Line() int {
 	return s.textarea.Line()
 }
 
 // Column returns the current column position (0-indexed).
-func (s *SyntaxTextarea) Column() int {
+func (s *Textarea) Column() int {
 	return s.textarea.LineInfo().CharOffset
 }
 
 // CursorDown moves cursor down one line.
-func (s *SyntaxTextarea) CursorDown() {
+func (s *Textarea) CursorDown() {
 	s.textarea.CursorDown()
 }
 
 // SetCursor sets the cursor column position within the current line.
-func (s *SyntaxTextarea) SetCursor(col int) {
+func (s *Textarea) SetCursor(col int) {
 	s.textarea.SetCursor(col)
 }
 
 // LineCount returns the total number of lines.
-func (s *SyntaxTextarea) LineCount() int {
+func (s *Textarea) LineCount() int {
 	return s.textarea.LineCount()
 }
 
 // SetCursorPosition moves the cursor to the specified line and column.
 // It first moves to the top, then moves down to the target line, then sets the column.
-func (s *SyntaxTextarea) SetCursorPosition(line, column int) {
+func (s *Textarea) SetCursorPosition(line, column int) {
 	// Move to start
 	s.textarea.CursorStart()
 	for s.textarea.Line() > 0 {
@@ -177,14 +177,14 @@ func (s *SyntaxTextarea) SetCursorPosition(line, column int) {
 }
 
 // Update handles messages and updates the textarea state.
-func (s *SyntaxTextarea) Update(msg tea.Msg) (*SyntaxTextarea, tea.Cmd) {
+func (s *Textarea) Update(msg tea.Msg) (*Textarea, tea.Cmd) {
 	var cmd tea.Cmd
 	s.textarea, cmd = s.textarea.Update(msg)
 	return s, cmd
 }
 
 // View renders the syntax-highlighted textarea.
-func (s *SyntaxTextarea) View() string {
+func (s *Textarea) View() string {
 	content := s.textarea.Value()
 	lines := strings.Split(content, "\n")
 
@@ -282,7 +282,7 @@ func (s *SyntaxTextarea) View() string {
 // - Green "|" for added lines (new lines that didn't exist in original)
 // - Yellow "|" for modified lines (content changed from original)
 // - Red "|" for positions where lines were deleted from original
-func (s *SyntaxTextarea) getDiffIndicator(lineIdx int, lineStates []LineState, deletedAt []bool) string {
+func (s *Textarea) getDiffIndicator(lineIdx int, lineStates []LineState, deletedAt []bool) string {
 	// First check if there's a deleted line at this position
 	if lineIdx < len(deletedAt) && deletedAt[lineIdx] {
 		return DiffDeletedStyle.Render("|")
@@ -304,7 +304,7 @@ func (s *SyntaxTextarea) getDiffIndicator(lineIdx int, lineStates []LineState, d
 }
 
 // insertCursor inserts a visible cursor at the specified column position.
-func (s *SyntaxTextarea) insertCursor(plainLine, highlightedLine string, col int) string {
+func (s *Textarea) insertCursor(plainLine, highlightedLine string, col int) string {
 	// Get the character at cursor position or space if at end
 	plainRunes := []rune(plainLine)
 
@@ -378,12 +378,12 @@ func intToStr(n int) string {
 }
 
 // GetLanguage returns the detected or set language.
-func (s *SyntaxTextarea) GetLanguage() string {
+func (s *Textarea) GetLanguage() string {
 	return s.language
 }
 
 // CursorPosition returns the current cursor position as (line, column), both 1-indexed.
-func (s *SyntaxTextarea) CursorPosition() (int, int) {
+func (s *Textarea) CursorPosition() (int, int) {
 	line := s.textarea.Line() + 1 // Convert from 0-indexed to 1-indexed
 	lineInfo := s.textarea.LineInfo()
 	col := lineInfo.ColumnOffset + 1 // Convert from 0-indexed to 1-indexed

@@ -55,7 +55,7 @@ func (m *Model) BuildStatusBar() string {
 	// rightParts = append(rightParts, "[utf-8]")
 
 	// Cursor position (line:column)
-	line, col := m.SyntaxTA.CursorPosition()
+	line, col := m.Textarea.CursorPosition()
 	rightParts = append(rightParts, fmt.Sprintf("%d:%d", line, col))
 
 	// Directory path
