@@ -56,6 +56,14 @@ main() → InitialModel() → Tea.Program Runtime
     View (Renderer)
 ```
 
+- Features (self-contained): quit.go, save.go, palette.go
+- Core data: buffer.go (Buffer struct), model.go (Model struct)
+- API interface: context.go (EditorContext implementation), command.go (Command registry)
+- UI components: textarea.go, status.go, styles.go, dialog.go, overlay.go
+- Git integration: git.go, diff.go
+- Utilities: cursor.go, highlight.go
+- App lifecycle: app.go
+
 ### Component Breakdown
 
 **1. Model (`type model struct`)**

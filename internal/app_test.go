@@ -11,14 +11,14 @@ import (
 
 func TestFeatureKeyBinding_Quit(t *testing.T) {
 	msg := tea.KeyMsg{Type: tea.KeyCtrlQ}
-	if !key.Matches(msg, vanilla.QuitKeyBinding) {
+	if !key.Matches(msg, QuitKeyBinding) {
 		t.Error("Ctrl+Q should match Quit binding")
 	}
 }
 
 func TestFeatureKeyBinding_Save(t *testing.T) {
 	msg := tea.KeyMsg{Type: tea.KeyCtrlS}
-	if !key.Matches(msg, vanilla.SaveKeyBinding) {
+	if !key.Matches(msg, SaveKeyBinding) {
 		t.Error("Ctrl+S should match Save binding")
 	}
 }
@@ -60,8 +60,8 @@ func TestFeatureKeyBindings_AllHaveHelp(t *testing.T) {
 		name    string
 		binding key.Binding
 	}{
-		{"Quit", vanilla.QuitKeyBinding},
-		{"Save", vanilla.SaveKeyBinding},
+		{"Quit", QuitKeyBinding},
+		{"Save", SaveKeyBinding},
 		{"CommandPalette", PaletteKeyBinding},
 		{"FileOpen", vanilla.FileSwitcherKeyBinding},
 		{"BufferSwitch", vanilla.BufferSwitcherKeyBinding},
@@ -85,14 +85,14 @@ func TestGetCommandByKey_ReturnsCorrectCommand(t *testing.T) {
 		Name:        "test-quit",
 		Key:         "Ctrl-Q",
 		Description: "Test quit",
-		KeyBinding:  vanilla.QuitKeyBinding,
+		KeyBinding:  QuitKeyBinding,
 		Execute:     nil,
 	})
 	RegisterCommand(Command{
 		Name:        "test-save",
 		Key:         "Ctrl-S",
 		Description: "Test save",
-		KeyBinding:  vanilla.SaveKeyBinding,
+		KeyBinding:  SaveKeyBinding,
 		Execute:     nil,
 	})
 
