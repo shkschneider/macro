@@ -1,4 +1,4 @@
-package vanilla
+package internal
 
 import (
 	"github.com/charmbracelet/bubbles/key"
@@ -21,15 +21,17 @@ func init() {
 		Key:           "Ctrl-Q",
 		Description:   "Quit the editor",
 		KeyBinding:    QuitKeyBinding,
-		PluginExecute: ExecuteQuit,
+		PluginExecute: nil, // Main app provides execute handler
 	})
 }
 
 // ExecuteQuit quits the editor
-func ExecuteQuit(ctx api.EditorContext) tea.Cmd {
+func ExecuteQuit(m *Model) tea.Cmd {
 	// Save cursor state before quitting
-	ctx.SaveCurrentBufferState()
-	ctx.SaveCursorState()
+	m.saveCurrentBufferState()
+	if m.CursorState != nil {
+		_ = m.CursorState.Save()
+	}
 	return tea.Quit
 }
 

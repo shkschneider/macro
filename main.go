@@ -27,13 +27,20 @@ func main() {
 	api.Register(func(cmd api.CommandRegistration) {
 		var execFunc func(*internal.Model) tea.Cmd
 
-		// Special case: Help command needs access to CommandRegistry
-		if cmd.Name == internal.CmdPalette {
+		// Special cases: Internal commands need access to Model directly
+		switch cmd.Name {
+		case internal.CmdPalette:
 			execFunc = internal.ExecuteCommandPalette
-		} else if cmd.PluginExecute != nil {
-			// Use the plugin's execute function via EditorContext
-			execFunc = func(m *internal.Model) tea.Cmd {
-				return cmd.PluginExecute(m)
+		case internal.CmdQuit:
+			execFunc = internal.ExecuteQuit
+		case internal.CmdSave:
+			execFunc = internal.ExecuteSave
+		default:
+			if cmd.PluginExecute != nil {
+				// Use the plugin's execute function via EditorContext
+				execFunc = func(m *internal.Model) tea.Cmd {
+					return cmd.PluginExecute(m)
+				}
 			}
 		}
 
