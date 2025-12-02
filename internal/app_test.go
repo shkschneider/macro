@@ -146,7 +146,7 @@ func TestBuffer_IsModified(t *testing.T) {
 }
 
 func TestBuildStatusBar_NewFile(t *testing.T) {
-	m := InitialModel("")
+	m := NewModel("")
 	// Set termWidth for test
 	TermWidth = 80
 
@@ -157,7 +157,7 @@ func TestBuildStatusBar_NewFile(t *testing.T) {
 }
 
 func TestBuildStatusBar_WithFile(t *testing.T) {
-	m := InitialModel("")
+	m := NewModel("")
 	// Set termWidth for test
 	TermWidth = 120
 
@@ -193,7 +193,7 @@ func TestBuildStatusBar_WithFile(t *testing.T) {
 }
 
 func TestBuildStatusBar_ModifiedFile(t *testing.T) {
-	m := InitialModel("")
+	m := NewModel("")
 	// Set termWidth for test
 	TermWidth = 120
 
@@ -220,7 +220,7 @@ func TestBuildStatusBar_ModifiedFile(t *testing.T) {
 }
 
 func TestBuildStatusBar_ReadOnlyFile(t *testing.T) {
-	m := InitialModel("")
+	m := NewModel("")
 	// Set termWidth for test
 	TermWidth = 120
 
@@ -245,7 +245,7 @@ func TestBuildStatusBar_ReadOnlyFile(t *testing.T) {
 }
 
 func TestBuildStatusBar_CursorPosition(t *testing.T) {
-	m := InitialModel("")
+	m := NewModel("")
 	// Set termWidth for test
 	TermWidth = 120
 

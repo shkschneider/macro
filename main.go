@@ -53,7 +53,7 @@ func main() {
 		filePath = args[0]
 	}
 
-	p := tea.NewProgram(internal.InitialModel(filePath), tea.WithAltScreen())
+	p := tea.NewProgram(internal.NewModel(filePath), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
