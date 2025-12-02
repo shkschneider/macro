@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/shkschneider/macro/api"
 	"github.com/shkschneider/macro/internal"
-	_ "github.com/shkschneider/macro/plugins/vanilla" // Import to trigger init()
+	_ "github.com/shkschneider/macro/commands" // Import to trigger init()
 )
 
 func main() {

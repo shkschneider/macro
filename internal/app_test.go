@@ -6,19 +6,19 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/shkschneider/macro/plugins/vanilla"
+	"github.com/shkschneider/macro/commands"
 )
 
 func TestFeatureKeyBinding_Quit(t *testing.T) {
 	msg := tea.KeyMsg{Type: tea.KeyCtrlQ}
-	if !key.Matches(msg, vanilla.QuitKeyBinding) {
+	if !key.Matches(msg, commands.QuitKeyBinding) {
 		t.Error("Ctrl+Q should match Quit binding")
 	}
 }
 
 func TestFeatureKeyBinding_Save(t *testing.T) {
 	msg := tea.KeyMsg{Type: tea.KeyCtrlS}
-	if !key.Matches(msg, vanilla.SaveKeyBinding) {
+	if !key.Matches(msg, commands.SaveKeyBinding) {
 		t.Error("Ctrl+S should match Save binding")
 	}
 }
@@ -31,7 +31,7 @@ func TestFeatureKeyBinding_FileOpen(t *testing.T) {
 		Alt:   false,
 	}
 	msg.Type = tea.KeyCtrlP
-	if !key.Matches(msg, vanilla.FileSwitcherKeyBinding) {
+	if !key.Matches(msg, commands.FileSwitcherKeyBinding) {
 		t.Error("Ctrl+P should match FileOpen binding")
 	}
 }
@@ -41,7 +41,7 @@ func TestFeatureKeyBinding_BufferSwitch(t *testing.T) {
 	msg := tea.KeyMsg{
 		Type: tea.KeyCtrlB,
 	}
-	if !key.Matches(msg, vanilla.BufferSwitcherKeyBinding) {
+	if !key.Matches(msg, commands.BufferSwitcherKeyBinding) {
 		t.Error("Ctrl+B should match BufferSwitch binding")
 	}
 }
@@ -60,11 +60,11 @@ func TestFeatureKeyBindings_AllHaveHelp(t *testing.T) {
 		name    string
 		binding key.Binding
 	}{
-		{"Quit", vanilla.QuitKeyBinding},
-		{"Save", vanilla.SaveKeyBinding},
+		{"Quit", commands.QuitKeyBinding},
+		{"Save", commands.SaveKeyBinding},
 		{"CommandPalette", PaletteKeyBinding},
-		{"FileOpen", vanilla.FileSwitcherKeyBinding},
-		{"BufferSwitch", vanilla.BufferSwitcherKeyBinding},
+		{"FileOpen", commands.FileSwitcherKeyBinding},
+		{"BufferSwitch", commands.BufferSwitcherKeyBinding},
 	}
 
 	for _, b := range bindings {
@@ -85,14 +85,14 @@ func TestGetCommandByKey_ReturnsCorrectCommand(t *testing.T) {
 		Name:        "test-quit",
 		Key:         "Ctrl-Q",
 		Description: "Test quit",
-		KeyBinding:  vanilla.QuitKeyBinding,
+		KeyBinding:  commands.QuitKeyBinding,
 		Execute:     nil,
 	})
 	RegisterCommand(Command{
 		Name:        "test-save",
 		Key:         "Ctrl-S",
 		Description: "Test save",
-		KeyBinding:  vanilla.SaveKeyBinding,
+		KeyBinding:  commands.SaveKeyBinding,
 		Execute:     nil,
 	})
 
