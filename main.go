@@ -27,7 +27,7 @@ func main() {
 	api.Register(func(cmd api.CommandRegistration) {
 		var execFunc func(*internal.Model) tea.Cmd
 
-		// Special cases: Internal commands need access to Model directly
+		// Special cases: Internal commands that need direct Model access instead of EditorContext interface
 		switch cmd.Name {
 		case internal.CmdPalette:
 			execFunc = internal.ExecuteCommandPalette
