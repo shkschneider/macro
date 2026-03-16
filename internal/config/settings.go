@@ -256,6 +256,9 @@ func ReadSettings() error {
 func ParsedSettings() map[string]any {
 	s := make(map[string]any)
 	for k, v := range parsedSettings {
+		if strings.HasPrefix(reflect.TypeOf(v).String(), "map") {
+			continue
+		}
 		s[k] = v
 	}
 	return s
