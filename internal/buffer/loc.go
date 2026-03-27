@@ -113,14 +113,13 @@ func (l Loc) left(buf *LineArray) Loc {
 // MoveLA moves the cursor n characters to the left or right
 // It moves the cursor left if n is negative
 func (l Loc) MoveLA(n int, buf *LineArray) Loc {
-	if n > 0 {
-		for i := 0; i < n; i++ {
-			l = l.right(buf)
-		}
-		return l
+	for n > 0 {
+		l = l.right(buf)
+		n--
 	}
-	for i := 0; i < util.Abs(n); i++ {
+	for n < 0 {
 		l = l.left(buf)
+		n++
 	}
 	return l
 }
