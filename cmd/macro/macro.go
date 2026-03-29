@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"runtime/pprof"
-	"sort"
 	"strconv"
 	"syscall"
 	"time"
@@ -33,11 +31,7 @@ var (
 	// Command line flags
 	flagVersion   = flag.Bool("version", false, "Show the version number and information")
 	flagConfigDir = flag.String("config-dir", "", "Specify a custom location for the configuration directory")
-	flagOptions   = flag.Bool("options", false, "Show all option help")
 	flagDebug     = flag.Bool("debug", false, "Enable debug mode (prints debug info to ./log.txt)")
-	flagProfile   = flag.Bool("profile", false, "Enable CPU profiling (writes profile info to ./micro.prof)")
-	flagPlugin    = flag.String("plugin", "", "Plugin command")
-	flagClean     = flag.Bool("clean", false, "Clean configuration directory")
 	optionFlags   map[string]*string
 
 	sighup chan os.Signal
@@ -48,99 +42,20 @@ var (
 func InitFlags() {
 	// Note: keep this in sync with the man page in assets/packaging/micro.1
 	flag.Usage = func() {
-		fmt.Println("Usage: micro [OPTION]... [FILE]... [+LINE[:COL]] [+/REGEX]")
-		fmt.Println("       micro [OPTION]... [FILE[:LINE[:COL]]]...  (only if the `parsecursor` option is enabled)")
-		fmt.Println("-clean")
-		fmt.Println("    \tClean the configuration directory and exit")
-		fmt.Println("-config-dir dir")
-		fmt.Println("    \tSpecify a custom location for the configuration directory")
-		fmt.Println("FILE:LINE[:COL] (only if the `parsecursor` option is enabled)")
-		fmt.Println("FILE +LINE[:COL]")
-		fmt.Println("    \tSpecify a line and column to start the cursor at when opening a buffer")
-		fmt.Println("+/REGEX")
-		fmt.Println("    \tSpecify a regex to search for when opening a buffer")
-		fmt.Println("-options")
-		fmt.Println("    \tShow all options help and exit")
-		fmt.Println("-debug")
-		fmt.Println("    \tEnable debug mode (enables logging to ./log.txt)")
-		fmt.Println("-profile")
-		fmt.Println("    \tEnable CPU profiling (writes profile info to ./micro.prof")
-		fmt.Println("    \tso it can be analyzed later with \"go tool pprof micro.prof\")")
-		fmt.Println("-version")
-		fmt.Println("    \tShow the version number and information and exit")
-
-		fmt.Print("\nMicro's plugins can be managed at the command line with the following commands.\n")
-		fmt.Println("-plugin install [PLUGIN]...")
-		fmt.Println("    \tInstall plugin(s)")
-		fmt.Println("-plugin remove [PLUGIN]...")
-		fmt.Println("    \tRemove plugin(s)")
-		fmt.Println("-plugin update [PLUGIN]...")
-		fmt.Println("    \tUpdate plugin(s) (if no argument is given, updates all plugins)")
-		fmt.Println("-plugin search [PLUGIN]...")
-		fmt.Println("    \tSearch for a plugin")
-		fmt.Println("-plugin list")
-		fmt.Println("    \tList installed plugins")
-		fmt.Println("-plugin available")
-		fmt.Println("    \tList available plugins")
-
-		fmt.Print("\nMicro's options can also be set via command line arguments for quick\nadjustments. For real configuration, please use the settings.json\nfile (see 'help options').\n\n")
-		fmt.Println("-<option> value")
-		fmt.Println("    \tSet `option` to `value` for this session")
-		fmt.Println("    \tFor example: `micro -syntax off file.c`")
-		fmt.Println("\nUse `micro -options` to see the full list of configuration options")
-	}
-
-	optionFlags = make(map[string]*string)
-
-	for k, v := range config.DefaultAllSettings() {
-		optionFlags[k] = flag.String(k, "", fmt.Sprintf("The %s option. Default value: '%v'.", k, v))
+		fmt.Println("Usage: micro [OPTION]... [DIR | FILE[:LINE[:COL]]]...")
 	}
 
 	flag.Parse()
 
 	if *flagVersion {
 		// If -version was passed
-		fmt.Println("Version:", util.Version)
+		fmt.Println("Macro Version:", util.Version)
 		fmt.Println("Commit hash:", util.CommitHash)
-		fmt.Println("Compiled on", util.CompileDate)
-		exit(0)
-	}
-
-	if *flagOptions {
-		// If -options was passed
-		var keys []string
-		m := config.DefaultAllSettings()
-		for k := range m {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			v := m[k]
-			fmt.Printf("-%s value\n", k)
-			fmt.Printf("    \tDefault value: '%v'\n", v)
-		}
 		exit(0)
 	}
 
 	if util.Debug == "OFF" && *flagDebug {
 		util.Debug = "ON"
-	}
-}
-
-// DoPluginFlags parses and executes any flags that require LoadAllPlugins (-plugin and -clean)
-func DoPluginFlags() {
-	if *flagClean || *flagPlugin != "" {
-		config.LoadAllPlugins()
-
-		if *flagPlugin != "" {
-			args := flag.Args()
-
-			config.PluginCommand(os.Stdout, *flagPlugin, args)
-		} else if *flagClean {
-			CleanConfig()
-		}
-
-		exit(0)
 	}
 }
 
@@ -214,7 +129,22 @@ func LoadInput(args []string) []*buffer.Buffer {
 		// Option 1
 		// We go through each file and load it
 		for i := 0; i < len(files); i++ {
-			buf, err := buffer.NewBufferFromFileWithCommand(files[i], buffer.BTDefault, command)
+			filename := files[i]
+
+			// Check if the file is actually a directory
+			if fileInfo, err := os.Stat(filename); err == nil && fileInfo.IsDir() {
+				// It's a directory - use fuzzy finder to select a file
+				selectedFile, err := fuzzyFindFile(filename)
+				if err != nil {
+					if err.Error() != "Cancelled" {
+						screen.TermMessage(fmt.Sprintf("Error in directory '%s': %s", filename, err.Error()))
+					}
+					continue
+				}
+				filename = selectedFile
+			}
+
+			buf, err := buffer.NewBufferFromFileWithCommand(filename, buffer.BTDefault, command)
 			if err != nil {
 				screen.TermMessage(err)
 				continue
@@ -310,17 +240,6 @@ func main() {
 
 	InitFlags()
 
-	if *flagProfile {
-		f, err := os.Create("micro.prof")
-		if err != nil {
-			log.Fatal("error creating CPU profile: ", err)
-		}
-		if err := pprof.StartCPUProfile(f); err != nil {
-			log.Fatal("error starting CPU profile: ", err)
-		}
-		defer pprof.StopCPUProfile()
-	}
-
 	InitLog()
 
 	err = config.InitConfigDir(*flagConfigDir)
@@ -363,8 +282,6 @@ func main() {
 		}
 	}
 
-	DoPluginFlags()
-
 	err = screen.Init()
 	if err != nil {
 		fmt.Println(err)
@@ -388,7 +305,7 @@ func main() {
 			if e, ok := err.(*lua.ApiError); ok {
 				fmt.Println("Lua API error:", e)
 			} else {
-				fmt.Println("Micro encountered an error:", errors.Wrap(err, 2).ErrorStack(), "\nIf you can reproduce this error, please report it at https://github.com/micro-editor/micro/issues")
+				fmt.Println("Micro encountered an error:", errors.Wrap(err, 2).ErrorStack())
 			}
 			// immediately backup all buffers with unsaved changes
 			for _, b := range buffer.OpenBuffers {
