@@ -1,5 +1,9 @@
 .DS_Store
 
+macro
+macro.exe
+!cmd/macro
+
 micro
 micro.exe
 !cmd/micro
