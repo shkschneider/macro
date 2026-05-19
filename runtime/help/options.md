@@ -322,11 +322,11 @@ Here are the available options:
    By default, this option points to the official plugin channel hosted on GitHub
    at https://github.com/micro-editor/plugin-channel.
 
-    default value: `https://raw.githubusercontent.com/micro-editor/plugin-channel/master/channel.json`
+    default value: `[https://raw.githubusercontent.com/micro-editor/plugin-channel/master/channel.json]`
 
 * `pluginrepos`: a list of links to plugin repositories.
 
-    default value: ``
+    default value: `[]`(empty list)
 
 * `readonly`: when enabled, disallows edits to the buffer. It is recommended
    to only ever set this option locally using `setlocal`.
@@ -411,7 +411,7 @@ Here are the available options:
    The color of the shown character is determined by the `indent-char`
    field in the current theme rather than the default text color.
 
-    default value: ``
+    default value: `""` (empty string)
 
 * `smartpaste`: add leading whitespace when pasting multiple lines.
    This will attempt to preserve the current indentation level when pasting an
