@@ -285,7 +285,7 @@ func main() {
 	err = screen.Init()
 	if err != nil {
 		fmt.Println(err)
-		fmt.Println("Fatal: Micro could not initialize a Screen.")
+		fmt.Println("Fatal: Macro could not initialize a Screen.")
 		exit(1)
 	}
 
@@ -305,7 +305,7 @@ func main() {
 			if e, ok := err.(*lua.ApiError); ok {
 				fmt.Println("Lua API error:", e)
 			} else {
-				fmt.Println("Micro encountered an error:", errors.Wrap(err, 2).ErrorStack())
+				fmt.Println("Macro encountered an error:", errors.Wrap(err, 2).ErrorStack())
 			}
 			// immediately backup all buffers with unsaved changes
 			for _, b := range buffer.OpenBuffers {

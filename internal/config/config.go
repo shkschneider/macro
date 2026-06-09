@@ -15,6 +15,22 @@ var ConfigDir string
 func InitConfigDir(flagConfigDir string) error {
 	var e error
 
+	macroHome := os.Getenv("MACRO_CONFIG_HOME")
+	if macroHome == "" {
+		// The user has not set $MACRO_CONFIG_HOME so we'll try $XDG_CONFIG_HOME
+		xdgHome := os.Getenv("XDG_CONFIG_HOME")
+		if xdgHome == "" {
+			// The user has not set $XDG_CONFIG_HOME so we should act like it was set to ~/.config
+			home, err := homedir.Dir()
+			if err != nil {
+				return errors.New("Error finding your home directory\nCan't load config files: " + err.Error())
+			}
+			xdgHome = filepath.Join(home, ".config")
+		}
+
+		macroHome = filepath.Join(xdgHome, "macro")
+	}
+
 	microHome := os.Getenv("MICRO_CONFIG_HOME")
 	if microHome == "" {
 		// The user has not set $MICRO_CONFIG_HOME so we'll try $XDG_CONFIG_HOME
@@ -30,7 +46,15 @@ func InitConfigDir(flagConfigDir string) error {
 
 		microHome = filepath.Join(xdgHome, "micro")
 	}
-	ConfigDir = microHome
+
+	// Prefer ~/.config/macro if it exists; fall back to ~/.config/micro.
+	if _, err := os.Stat(macroHome); err == nil {
+		ConfigDir = macroHome
+	} else if _, err := os.Stat(microHome); err == nil {
+		ConfigDir = microHome
+	} else {
+		ConfigDir = macroHome
+	}
 
 	if len(flagConfigDir) > 0 {
 		if _, err := os.Stat(flagConfigDir); os.IsNotExist(err) {
